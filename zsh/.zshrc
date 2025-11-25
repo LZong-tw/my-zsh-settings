@@ -1,4 +1,7 @@
 # ===========================================
+# Recommended: Best experience with iTerm2 + "Solarized Dark" color scheme
+# (use a Powerline-compatible font for Powerlevel10k)
+# ===========================================
 # POWERLEVEL10K INSTANT PROMPT
 # ===========================================
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.

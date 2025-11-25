@@ -59,6 +59,8 @@ mv ~/.zshrc.backup-<timestamp> ~/.zshrc
 - The sample `zsh/.zshrc` already references `powerlevel10k` as the theme and enables `zsh-autosuggestions` and `zsh-syntax-highlighting` in the `plugins` array. Installing the theme and plugins as shown above will allow those lines to take effect.
 - This project purposefully symlinks your home `~/.zshrc` to `zsh/.zshrc` inside this repo so you can manage it with version control.
 
+- ### Recommended terminal experience: This configuration looks best in iTerm2 with the "Solarized Dark" color scheme (use a Powerline-compatible font for the Powerlevel10k prompt).
+
 - The `install.sh` installer will attempt to auto-install Oh My Zsh if it is not found on the system; to opt out, run:
 ```bash
 ./install.sh --no-oh-my-zsh
