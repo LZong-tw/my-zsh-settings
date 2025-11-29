@@ -61,6 +61,15 @@ mv ~/.zshrc.backup-<timestamp> ~/.zshrc
 
 - ### Recommended terminal experience: This configuration looks best in iTerm2 with the "Solarized Dark" color scheme (use a Powerline-compatible font for the Powerlevel10k prompt).
 
+  This configuration also includes support for **iTerm2 Shell Integration**, which enables features like command history and alerts. To use it, you need to install the integration script first. There are two common ways to do this:
+
+  - **Easy Method:** In iTerm2, go to the menu `iTerm2` > `Install Shell Integration`.
+  - **Manual Method:** Run the following command in your terminal:
+    ```bash
+    curl -L https://iterm2.com/shell_integration/zsh -o ~/.iterm2_shell_integration.zsh
+    ```
+  Once the script is installed, this `.zshrc` will automatically load it on startup.
+
 - The `install.sh` installer will attempt to auto-install Oh My Zsh if it is not found on the system; to opt out, run:
 ```bash
 ./install.sh --no-oh-my-zsh
