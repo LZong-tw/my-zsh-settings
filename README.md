@@ -21,8 +21,8 @@ Enjoy your zsh configuration!
 ## Quick install
 ```bash
 # Clone repository
-git clone <your-repo-url> ~/projects/zsh-config
-cd ~/projects/zsh-config
+git clone https://github.com/LZong-tw/my-zsh-settings.git
+cd ~/my-zsh-settings
 
 # Run the installer. This will:
 # 1) backup any existing ~/.zshrc to ~/.zshrc.backup-<timestamp>
