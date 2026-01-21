@@ -38,7 +38,7 @@ plugins=(
   sudo
   laravel
   composer
-  docker
+  podman
   docker-compose
   colored-man-pages
   aws
