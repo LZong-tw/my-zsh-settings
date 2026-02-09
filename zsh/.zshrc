@@ -1,6 +1,8 @@
 # 如果是 Claude Code agent，跳過重的 plugin
 if [[ -n "$CLAUDE_CODE_AGENT_ID" ]]; then
-  ZSH_THEME="minimal"
+  # 直接跳過整個 oh-my-zsh
+  PROMPT='%~ $ '
+  return
 fi
 
 # ===========================================
