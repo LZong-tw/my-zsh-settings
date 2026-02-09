@@ -1,3 +1,8 @@
+# 如果是 Claude Code agent，跳過重的 plugin
+if [[ -n "$CLAUDE_CODE_AGENT_ID" ]]; then
+  ZSH_THEME="minimal"
+fi
+
 # ===========================================
 # POWERLEVEL10K INSTANT PROMPT
 # ===========================================
@@ -204,3 +209,4 @@ ec2ls() {
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
