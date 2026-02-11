@@ -4,7 +4,7 @@ if [[ -n "$CLAUDE_CODE_AGENT_ID" ]]; then
   PROMPT='%~ $ '
   return
 fi
-
+unset zle_bracketed_paste
 # ===========================================
 # POWERLEVEL10K INSTANT PROMPT
 # ===========================================
