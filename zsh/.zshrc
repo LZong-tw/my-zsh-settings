@@ -22,7 +22,6 @@ fi
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
-
 # ===========================================
 # 3. CORE ZSH / OMZ SETTINGS
 # ===========================================
@@ -31,41 +30,40 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
-# 停用自動更新與權限檢查
+# 效能關鍵：停用所有權限檢查與自動更新
 DISABLE_AUTO_UPDATE="true"
 ZSH_DISABLE_COMPFIX="true"
 
-# 極簡化 Plugins 列表 (保留功能性/視覺性插件)
-plugins=(
-  z
-  extract
-  sudo
-  colored-man-pages
-  zsh-autosuggestions
-  zsh-syntax-highlighting
-)
+# 極簡化 Plugins 列表
+plugins=(z extract sudo colored-man-pages zsh-autosuggestions zsh-syntax-highlighting)
 
 # ===========================================
-# 4. COMPLETION SYSTEM OPTIMIZATION (ULTRA FAST)
+# 4. THE IMMORTAL COMPLETION CACHE (ULTRA STABLE)
 # ===========================================
-# 避免呼叫慢速的 scutil
+# 1. 預先加入插件路徑到 fpath (compinit 才能抓到)
+for plugin ($plugins); do
+  [[ -d "$ZSH_CUSTOM/plugins/$plugin" ]] && fpath=("$ZSH_CUSTOM/plugins/$plugin" $fpath)
+  [[ -d "$ZSH/plugins/$plugin" ]] && fpath=("$ZSH/plugins/$plugin" $fpath)
+done
+
+# 2. 手動計算 Dump 路徑
 SHORT_HOST="${HOST/.*/}"
 export ZSH_COMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
 
-# 極速補全初始化
+# 3. 極速初始化 (不論 OMZ 怎麼想，我們強制用快取)
 autoload -Uz compinit
 if [[ -n "$ZSH_COMPDUMP"(#qN.m-1) ]]; then
   compinit -C -d "$ZSH_COMPDUMP"
 else
   compinit -i -d "$ZSH_COMPDUMP"
 fi
+
+# 4. 關鍵：鎖定 compinit，禁止 OMZ 再次執行或清理它
+zcompdump_refresh=0
 compinit() { : }
 
-# -------------------------------------------
-# LAZY LOAD & MANUAL ALIASES (Replacements)
-# -------------------------------------------
-
-# Git (Essential Aliases)
+# 載入 Oh My Zsh
+source $ZSH/oh-my-zsh.sh
 alias g='git'
 alias ga='git add'
 alias gaa='git add --all'
