@@ -165,7 +165,7 @@ rg() { grep -rn --color=auto --exclude-dir={.git,node_modules,vendor,.idea,stora
 # ===========================================
 export NVM_DIR="$HOME/.nvm"
 _load_nvm() {
-    unset -f nvm node npm npx yarn pnpm
+    unset -f nvm node npm npx yarn pnpm gemini codex
     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
     [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 }
