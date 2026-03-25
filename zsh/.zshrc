@@ -173,6 +173,8 @@ nvm() { _load_nvm; nvm "$@"; }
 node() { _load_nvm; node "$@"; }
 npm() { _load_nvm; npm "$@"; }
 npx() { _load_nvm; npx "$@"; }
+gemini() { _load_nvm; gemini "$@"; }
+codex() { _load_nvm; codex "$@"; }
 
 # ===========================================
 # 7. CLAUDE CODE ROUTER
