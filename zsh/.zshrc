@@ -1,214 +1,209 @@
-# 如果是 Claude Code agent，跳過重的 plugin
+# ===========================================
+# 0. GLOBAL FLAGS & CLAUDE CODE INTEGRATION
+# ===========================================
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+
+# Claude Code Agent 模式下直接進入極速模式
 if [[ -n "$CLAUDE_CODE_AGENT_ID" ]]; then
-  # 直接跳過整個 oh-my-zsh
-  PROMPT='%~ $ '
-  return
+    PROMPT='%~ $ '
+    return
 fi
-unset zle_bracketed_paste
+
 # ===========================================
-# POWERLEVEL10K INSTANT PROMPT
+# 1. TMUX & ITERM2 CONTROL MODE (-CC) DETECTION
 # ===========================================
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+if [[ "$TERM" == "screen" || "$TERM" == "tmux" || -n "$TMUX" ]]; then
+    export ITERMS_SHELL_INTEGRATION_SKIPPED=1
+fi
+
+# ===========================================
+# 2. POWERLEVEL10K INSTANT PROMPT
+# ===========================================
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
 # ===========================================
-# CORE CONFIGURATION
+# 3. CORE ZSH / OMZ SETTINGS
 # ===========================================
 export ZSH="$HOME/.oh-my-zsh"
-
-# Theme: Powerlevel10k
 ZSH_THEME="powerlevel10k/powerlevel10k"
-
-# Language Settings
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 
-# History Settings
-HISTSIZE=100000
-SAVEHIST=100000
-HISTFILE=~/.zsh_history
-setopt SHARE_HISTORY
-setopt HIST_IGNORE_DUPS
-setopt HIST_IGNORE_SPACE
-setopt HIST_REDUCE_BLANKS
+# 停用自動更新與權限檢查
+DISABLE_AUTO_UPDATE="true"
+ZSH_DISABLE_COMPFIX="true"
 
-# ===========================================
-# PLUGINS
-# ===========================================
-# Ensure these plugins are installed in your .oh-my-zsh/custom/plugins directory
+# 極簡化 Plugins 列表 (保留功能性/視覺性插件)
 plugins=(
-  git
   z
   extract
   sudo
-  laravel
-  composer
-  podman
-  docker-compose
   colored-man-pages
-  aws
-  kubectl
   zsh-autosuggestions
   zsh-syntax-highlighting
 )
 
+# ===========================================
+# 4. COMPLETION SYSTEM OPTIMIZATION (ULTRA FAST)
+# ===========================================
+# 避免呼叫慢速的 scutil
+SHORT_HOST="${HOST/.*/}"
+export ZSH_COMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
+
+# 極速補全初始化
+autoload -Uz compinit
+if [[ -n "$ZSH_COMPDUMP"(#qN.m-1) ]]; then
+  compinit -C -d "$ZSH_COMPDUMP"
+else
+  compinit -i -d "$ZSH_COMPDUMP"
+fi
+compinit() { : }
+
+# -------------------------------------------
+# LAZY LOAD & MANUAL ALIASES (Replacements)
+# -------------------------------------------
+
+# Git (Essential Aliases)
+alias g='git'
+alias ga='git add'
+alias gaa='git add --all'
+alias gcam='git commit -a -m'
+alias gcmsg='git commit -m'
+alias gco='git checkout'
+alias gd='git diff'
+alias gl='git pull'
+alias gp='git push'
+alias gst='git status'
+alias glog='git log --oneline --graph --decorate'
+
+# Docker & Compose
+alias d='docker'
+alias dco='docker compose'
+alias dcb='docker compose build'
+alias ddn='docker compose down'
+alias dex='docker execute -it'
+alias dlogs='docker compose logs -f'
+alias dps='docker compose ps'
+alias dup='docker compose up -d'
+
+# Composer & Laravel
+alias c='composer'
+alias ci='composer install'
+alias cu='composer update'
+alias cda='composer dump-autoload -o'
+alias art='php artisan'
+alias pa='php artisan'
+alias mfs='php artisan migrate:fresh --seed'
+
+# AWS & Kubectl (Lazy Load Completions)
+kubectl() {
+  unfunction kubectl
+  source <(command kubectl completion zsh)
+  command kubectl "$@"
+}
+aws() {
+  unfunction aws
+  complete -C '/usr/local/bin/aws_zsh_completer' aws
+  command aws "$@"
+}
+
+# 載入 Oh My Zsh
 source $ZSH/oh-my-zsh.sh
 
 # ===========================================
-# PATH SETTINGS
+# 5. MODERN TOOLS & ALIASES
 # ===========================================
-export PATH="$HOME/.composer/vendor/bin:./vendor/bin:$HOME/.local/bin:$PATH"
-export PATH="/Users/untionglim/.antigravity/antigravity/bin:$PATH"
+export PATH="$HOME/.composer/vendor/bin:./vendor/bin:$HOME/.local/bin:$HOME/.antigravity/antigravity/bin:$HOME/.bun/bin:$HOME/go/bin:$PATH"
 
-# ===========================================
-# MODERN CLI REPLACEMENTS
-# ===========================================
-if command -v bat > /dev/null; then
-  alias cat="bat"
-fi
+# API & Tokens
+export ANTHROPIC_AUTH_TOKEN=""
+export ANTHROPIC_BASE_URL=""
+export GITLAB_API_URL=""
+export GITLAB_PERSONAL_ACCESS_TOKEN=""
+export PAGERDUTY_API_KEY=''
+export AWS_REGION=ap-northeast-1
+export DOCKER_HOST="unix:///var/run/docker.sock"
+
+# Aliases
+alias myip="curl http://ipecho.net/plain; echo"
+alias ports="lsof -PiTCP -sTCP:LISTEN"
+alias ports_full="ss -tulanp"
+alias killport='f(){ lsof -ti:$1 | xargs kill -9; }; f'
 
 if command -v eza > /dev/null; then
   alias ls="eza --icons --git"
   alias ll="eza -l --icons --git"
   alias la="eza -la --icons --git"
-else
-  alias ll='ls -alFh'
-  alias la='ls -A'
 fi
 
-# ===========================================
-# CUSTOM ALIASES
-# ===========================================
-
-# --- System & Network ---
-alias zshconfig="nano ~/.zshrc"
-alias reload="source ~/.zshrc"
-alias myip="curl http://ipecho.net/plain; echo"
-# Quick check for listening ports
-alias ports="lsof -PiTCP -sTCP:LISTEN"
-# Detailed check (Linux/Compat)
-alias ports_full="ss -tulanp"
-
-# --- Git Workflow ---
 alias gs='git status'
 alias glog='git log --oneline --graph -20'
-alias gwip='git add -A && git commit -m "WIP"'
-
-# Usage: gclean (Cleans up merged branches, excluding main/master/develop)
-# Fixed: Uses grep -E for extended regex and removed xargs -r (incompatible with macOS)
-alias gclean='git branch --merged | grep -vE "main|master|develop" | xargs git branch -d'
-
-# --- PHP / Laravel ---
 alias pa="php artisan"
-alias pat="php artisan tinker"
-alias mfs="php artisan migrate:fresh --seed"
-alias pint="./vendor/bin/pint"
-alias ci="composer install"
-alias cda="composer dump-autoload -o"
-alias laralog='tail -f storage/logs/laravel.log'
-
-# --- Docker ---
 alias dc='docker compose'
-alias dcu='docker compose up -d'
-alias dcd='docker compose down'
-alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
+alias docker=podman
+alias reload="exec zsh"
 
 # ===========================================
 # POWERFUL FUNCTIONS
 # ===========================================
-
-# --- MySQL / MariaDB Tools ---
-
-# Usage: mysqlstat
-mysqlstat() {
-    mysql -e "SHOW GLOBAL STATUS LIKE 'Threads%'; SHOW GLOBAL STATUS LIKE 'Queries'; SHOW GLOBAL STATUS LIKE 'Slow_queries';"
-}
-
-# Usage: mysqlproc
-mysqlproc() {
-    mysql -e "SHOW FULL PROCESSLIST;"
-}
-
-# Usage: mysqlinnodb
-mysqlinnodb() {
-    mysql -e "SHOW ENGINE INNODB STATUS\G"
-}
-
-# Usage: mysqlexplain "SELECT * FROM users WHERE id = 1"
-mysqlexplain() {
-    if [ -z "$1" ]; then
-        echo "Usage: mysqlexplain '<SQL query>'"
-        return 1
-    fi
-    mysql -e "EXPLAIN ANALYZE $1"
-}
-
-# --- System & Network Utilities ---
-
-# Usage: killport 8080
-killport() {
-    if [ -z "$1" ]; then
-        echo "Usage: killport <port>"
-        return 1
-    fi
-    # Use lsof to find PID
-    local pid=$(lsof -ti:$1)
-    if [ -n "$pid" ]; then
-        kill -9 $pid && echo "Killed process $pid on port $1"
-    else
-        echo "No process on port $1"
-    fi
-}
-
-# Usage: testconn google.com 80
-testconn() {
-    if [ -z "$1" ]; then
-        echo "Usage: testconn <host> [port]"
-        return 1
-    fi
-    local port=${2:-80}
-    nc -zv "$1" "$port" 2>&1
-}
-
-# Usage: rg "search_term"
-rg() {
-    grep -rn --color=auto \
-        --exclude-dir={.git,node_modules,vendor,.idea,storage,cache,bootstrap/cache} \
-        "$@" .
-}
-
-# --- Laravel Utilities ---
-
-# Usage: laraclear
+mysqlstat() { mysql -e "SHOW GLOBAL STATUS LIKE 'Threads%'; SHOW GLOBAL STATUS LIKE 'Queries'; SHOW GLOBAL STATUS LIKE 'Slow_queries';"; }
+mysqlproc() { mysql -e "SHOW FULL PROCESSLIST;"; }
+mysqlinnodb() { mysql -e "SHOW ENGINE INNODB STATUS\G"; }
+mysqlexplain() { [ -z "$1" ] && { echo "Usage: mysqlexplain '<SQL query>'"; return 1; }; mysql -e "EXPLAIN ANALYZE $1"; }
 laraclear() {
-    php artisan cache:clear
-    php artisan config:clear
-    php artisan route:clear
-    php artisan view:clear
-    composer dump-autoload -o
+    php artisan cache:clear; php artisan config:clear; php artisan route:clear; php artisan view:clear; composer dump-autoload -o
     echo "All caches cleared & Autoload dumped."
 }
+ec2ls() { aws ec2 describe-instances --query "Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,PrivateIpAddress,Tags[?Key=='Name'].Value|[0]]" --output table; }
+testconn() { [ -z "$1" ] && { echo "Usage: testconn <host> [port]"; return 1; }; local port=${2:-80}; nc -zv "$1" "$port" 2>&1; }
+rg() { grep -rn --color=auto --exclude-dir={.git,node_modules,vendor,.idea,storage,cache,bootstrap/cache} "$@" . ; }
 
-# --- AWS Utilities ---
+# ===========================================
+# 6. NVM LAZY LOAD
+# ===========================================
+export NVM_DIR="$HOME/.nvm"
+_load_nvm() {
+    unset -f nvm node npm npx yarn pnpm
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+}
+nvm() { _load_nvm; nvm "$@"; }
+node() { _load_nvm; node "$@"; }
+npm() { _load_nvm; npm "$@"; }
+npx() { _load_nvm; npx "$@"; }
 
-alias awswho='aws sts get-caller-identity'
-
-# Usage: ec2ls
-# Fixed: Changed quoting style to avoid backtick syntax errors in zsh
-ec2ls() {
-    aws ec2 describe-instances \
-        --query "Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,PrivateIpAddress,Tags[?Key=='Name'].Value|[0]]" \
-        --output table
+# ===========================================
+# 7. CLAUDE CODE ROUTER
+# ===========================================
+cclaude() {
+    if ! ccr status &>/dev/null; then
+        nohup ccr start > /dev/null 2>&1 &
+        disown; sleep 1
+    fi
+    (eval "$(ccr activate)" && claude "$@")
 }
 
 # ===========================================
-# POWERLEVEL10K CONFIGURATION
+# 8. BACKGROUND TASKS
 # ===========================================
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+if [[ -z "$ITERMS_SHELL_INTEGRATION_SKIPPED" ]]; then
+    [[ -e "${HOME}/.iterm2_shell_integration.zsh" ]] && source "${HOME}/.iterm2_shell_integration.zsh"
+fi
+
+zcompile_if_needed() {
+  local file=$1
+  [[ -f "$file" && (! -f "$file.zwc" || "$file" -nt "$file.zwc") ]] && zcompile "$file"
+}
+(
+  zcompile_if_needed ~/.zshrc
+  zcompile_if_needed ~/.p10k.zsh
+) &!
+
+# ===========================================
+# 9. FINISH
+# ===========================================
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
-
-export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && . "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
+[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)" || true
