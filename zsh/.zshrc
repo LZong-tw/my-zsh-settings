@@ -162,17 +162,16 @@ rg() { grep -rn --color=auto --exclude-dir={.git,node_modules,vendor,.idea,stora
 # 6. NVM LAZY LOAD
 # ===========================================
 export NVM_DIR="$HOME/.nvm"
+_nvm_lazy_cmds=(nvm node npm npx yarn pnpm gemini codex)
 _load_nvm() {
     unset -f nvm node npm npx yarn pnpm gemini codex
     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
     [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 }
-nvm() { _load_nvm; nvm "$@"; }
-node() { _load_nvm; node "$@"; }
-npm() { _load_nvm; npm "$@"; }
-npx() { _load_nvm; npx "$@"; }
-gemini() { _load_nvm; gemini "$@"; }
-codex() { _load_nvm; codex "$@"; }
+for _cmd in $_nvm_lazy_cmds; do
+    eval "${_cmd}() { _load_nvm; ${_cmd} \"\$@\"; }"
+done
+unset _cmd
 
 # ===========================================
 # 7. CLAUDE CODE ROUTER
