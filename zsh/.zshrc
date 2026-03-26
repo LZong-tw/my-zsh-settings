@@ -26,6 +26,8 @@ fi
 [[ -z "${_nvm_node_bin:-}" ]] && _nvm_node_bin="$(ls -d "$NVM_DIR/versions/node/"*/bin 2>/dev/null | sort -V | tail -1)"
 [[ -n "$_nvm_node_bin" ]] && export PATH="$_nvm_node_bin:$PATH"
 unset _nvm_ver _nvm_node_bin
+# Strip relative paths and empty entries from inherited PATH
+path=("${(@)path:#(|./*|[^/]*)}")
 export PATH="$HOME/.composer/vendor/bin:$HOME/.local/bin:$HOME/.antigravity/antigravity/bin:$HOME/.bun/bin:$HOME/go/bin:$PATH"
 
 # API secrets: Keychain cache → 1Password fallback
@@ -35,48 +37,60 @@ _secret_keys=(anthropic_auth_token gitlab_personal_access_token pagerduty_api_ke
 _secret_envs=(ANTHROPIC_AUTH_TOKEN GITLAB_PERSONAL_ACCESS_TOKEN PAGERDUTY_API_KEY PAGERDUTY_USER_API_KEY)
 
 _keychain_read()  { security find-generic-password -a "$USER" -s "zsh-$1" -w 2>/dev/null; }
-_keychain_write() { security add-generic-password -a "$USER" -s "zsh-$1" -w "$2" -U 2>/dev/null; }
+_keychain_write() { security add-generic-password -a "$USER" -s "zsh-$1" -w "$2" -U; }
 
 load-secrets() {
     [[ $_op_secrets_loaded -eq 1 ]] && return
     local _i _key _env _val _need_op=0
 
-    # 1) Try Keychain first (instant, no auth)
+    # 1) Try Keychain first (instant, no auth) — collect all before exporting
+    local -a _cached_vals
     for _i in {1..${#_secret_keys}}; do
-        _key=${_secret_keys[$_i]}
-        _env=${_secret_envs[$_i]}
-        _val=$(_keychain_read "$_key")
+        _val=$(_keychain_read "${_secret_keys[$_i]}")
         if [[ -n "$_val" ]]; then
-            export "$_env=$_val"
+            _cached_vals+=("$_val")
         else
             _need_op=1
             break
         fi
     done
 
-    # 2) Keychain miss → fetch all from 1Password (Touch ID once) → cache
-    if [[ $_need_op -eq 1 ]]; then
+    if [[ $_need_op -eq 0 ]]; then
+        # All from Keychain — commit
+        for _i in {1..${#_secret_keys}}; do
+            export "${_secret_envs[$_i]}=${_cached_vals[$_i]}"
+        done
+    else
+        # 2) Keychain miss → fetch ALL from 1Password, then commit atomically
         local _t
-        _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[1]}" --no-newline) || return 1
-        export "${_secret_envs[1]}=$_t"
-        _keychain_write "${_secret_keys[1]}" "$_t"
-        for _i in {2..${#_secret_keys}}; do
-            _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[$_i]}" --no-newline 2>/dev/null)
-            export "${_secret_envs[$_i]}=$_t"
-            _keychain_write "${_secret_keys[$_i]}" "$_t"
+        local -a _new_vals
+        for _i in {1..${#_secret_keys}}; do
+            _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[$_i]}" --no-newline) || return 1
+            _new_vals+=("$_t")
+        done
+        for _i in {1..${#_secret_keys}}; do
+            export "${_secret_envs[$_i]}=${_new_vals[$_i]}"
+            _keychain_write "${_secret_keys[$_i]}" "${_new_vals[$_i]}" || true
         done
     fi
     _op_secrets_loaded=1
 }
 
-# refresh-secrets: force re-fetch from 1Password and update Keychain cache
+# refresh-secrets: atomic re-fetch — only update Keychain if ALL succeed
 refresh-secrets() {
-    _op_secrets_loaded=0
     local _i _t
+    local -a _new_vals
     for _i in {1..${#_secret_keys}}; do
-        _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[$_i]}" --no-newline) || return 1
-        export "${_secret_envs[$_i]}=$_t"
-        _keychain_write "${_secret_keys[$_i]}" "$_t"
+        _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[$_i]}" --no-newline) || {
+            echo "Failed to read ${_secret_keys[$_i]} from 1Password. Aborted, nothing changed."
+            return 1
+        }
+        _new_vals+=("$_t")
+    done
+    # All reads succeeded → commit to env + Keychain
+    for _i in {1..${#_secret_keys}}; do
+        export "${_secret_envs[$_i]}=${_new_vals[$_i]}"
+        _keychain_write "${_secret_keys[$_i]}" "${_new_vals[$_i]}" || true
     done
     _op_secrets_loaded=1
     echo "Secrets refreshed from 1Password → Keychain."
@@ -177,11 +191,26 @@ bindkey '^X^E' edit-command-line
 # --- Terminal title (from lib/termsupport.zsh) ---
 autoload -Uz add-zsh-hook
 function _set_terminal_title_precmd { print -Pn "\e]2;%~\a"; print -Pn "\e]1;%1~\a" }
-function _set_terminal_title_preexec { printf "\e]2;%s\a" "${1//\%/%%}"; printf "\e]1;%s\a" "${1[(w)1]}" }
+function _set_terminal_title_preexec {
+    local _t="${1//\%/%%}"
+    _t="${_t//[$'\a\e\n\r']}"
+    printf "\e]2;%s\a" "$_t"
+    local _w="${1[(w)1]}"
+    _w="${_w//[$'\a\e\n\r']}"
+    printf "\e]1;%s\a" "$_w"
+}
 add-zsh-hook precmd _set_terminal_title_precmd
 add-zsh-hook preexec _set_terminal_title_preexec
 # OSC 7: 讓 terminal 知道 CWD（新分頁開在同目錄）
-function _set_terminal_cwd { printf "\e]7;file://%s%s\a" "$HOST" "${PWD// /%20}" }
+function _set_terminal_cwd {
+    local _pwd="${PWD}"
+    _pwd="${_pwd//[$'\a\e\n\r']}"
+    _pwd="${_pwd//'%'/%25}"
+    _pwd="${_pwd//' '/%20}"
+    _pwd="${_pwd//'#'/%23}"
+    _pwd="${_pwd//'?'/%3F}"
+    printf "\e]7;file://%s%s\a" "$HOST" "$_pwd"
+}
 add-zsh-hook precmd _set_terminal_cwd
 
 # ===========================================
@@ -198,7 +227,6 @@ export ZSH_COMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
 # Add plugin completion directories to fpath
 fpath=(
   $HOME/.oh-my-zsh/plugins/extract
-  $HOME/.oh-my-zsh/plugins/z
   $fpath
 )
 autoload -Uz compinit
@@ -224,7 +252,7 @@ zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-
 # ===========================================
 _omz="$HOME/.oh-my-zsh"
 source "$_omz/custom/themes/powerlevel10k/powerlevel10k.zsh-theme"
-source "$_omz/plugins/z/z.plugin.zsh"
+source <(command zoxide init zsh)
 source "$_omz/plugins/extract/extract.plugin.zsh"
 source "$_omz/plugins/sudo/sudo.plugin.zsh"
 source "$_omz/plugins/colored-man-pages/colored-man-pages.plugin.zsh"
@@ -281,7 +309,7 @@ alias niceboat='ssh niceboat.kkinternal-dev.com'
 alias voyager='ssh voyager.kkinternal.com'
 alias myip="curl http://ipecho.net/plain; echo"
 alias ports="lsof -PiTCP -sTCP:LISTEN"
-alias ports_full="ss -tulanp"
+alias ports_full="netstat -an -p tcp"
 killport() { lsof -ti:"$1" | xargs kill -9; }
 
 # ls / eza
@@ -296,18 +324,21 @@ fi
 
 alias reload="exec zsh"
 
-# AWS & Kubectl (Lazy Load Completions)
+# AWS & Kubectl (Lazy Load: first Tab OR first run triggers completion load)
 kubectl() {
   unfunction kubectl
   source <(command kubectl completion zsh)
-  command kubectl "$@"
+  kubectl "$@"
 }
+compdef '_dispatch kubectl kubectl' kubectl
+
 aws() {
   unfunction aws
   autoload -U +X bashcompinit && bashcompinit
   complete -C '/usr/local/bin/aws_completer' aws
   command aws "$@"
 }
+compdef '_dispatch aws aws' aws
 
 # ===========================================
 # 9. POWERFUL FUNCTIONS
@@ -317,7 +348,11 @@ mysqlproc() { mysql -e "SHOW FULL PROCESSLIST;"; }
 mysqlinnodb() { mysql -e "SHOW ENGINE INNODB STATUS\G"; }
 mysqlexplain() { [ -z "$1" ] && { echo "Usage: mysqlexplain '<SQL query>'"; return 1; }; mysql -e "EXPLAIN ANALYZE $1"; }
 laraclear() {
-    php artisan cache:clear; php artisan config:clear; php artisan route:clear; php artisan view:clear; composer dump-autoload -o
+    php artisan cache:clear &&
+    php artisan config:clear &&
+    php artisan route:clear &&
+    php artisan view:clear &&
+    composer dump-autoload -o &&
     echo "All caches cleared & Autoload dumped."
 }
 ec2ls() { aws ec2 describe-instances --query "Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,PrivateIpAddress,Tags[?Key=='Name'].Value|[0]]" --output table; }
@@ -325,10 +360,22 @@ testconn() { [ -z "$1" ] && { echo "Usage: testconn <host> [port]"; return 1; };
 grepall() { grep -rn --color=auto --exclude-dir={.git,node_modules,vendor,.idea,storage,cache,bootstrap/cache} "$@" . ; }
 
 # take: mkdir+cd / git clone+cd / download+extract+cd
-mkcd() { mkdir -p "$@" && cd "${@:$#}" }
-takeurl() { local d=$(mktemp); curl -L "$1" > "$d"; tar xf "$d"; cd "$(tar tf "$d" | head -1)"; rm "$d" }
-takezip() { local d=$(mktemp); curl -L "$1" > "$d"; unzip "$d" -d ./; cd "$(unzip -l "$d" | awk 'NR==4{print $4}' | sed 's/\/.*//')"; rm "$d" }
-takegit() { git clone "$1" && cd "$(basename "${1%%.git}")" }
+mkcd() { [[ $# -eq 0 ]] && { echo "Usage: mkcd <dir>"; return 1; }; mkdir -p "$@" && cd "${@:$#}" }
+takeurl() {
+    local d=$(mktemp); curl -L "$1" > "$d"
+    tar xf "$d"
+    local _dir=$(tar tf "$d" | grep -m1 '/$' | head -1 | sed 's|/.*||')
+    rm "$d"
+    [[ -n "$_dir" && -d "$_dir" ]] && cd "$_dir"
+}
+takezip() {
+    local d=$(mktemp); curl -L "$1" > "$d"
+    unzip "$d" -d ./
+    local _dir=$(unzip -l "$d" | awk 'NR>3 && /\/$/ {sub(/\/.*/, "", $4); print $4; exit}')
+    rm "$d"
+    [[ -n "$_dir" && -d "$_dir" ]] && cd "$_dir"
+}
+takegit() { local _url="${1%%/}"; git clone "$_url" && cd "$(basename "${_url%%.git}")" }
 take() {
     if [[ $1 =~ ^https?.*\.(tar\.(gz|bz2|xz)|tgz)$ ]]; then takeurl "$1"
     elif [[ $1 =~ ^https?.*\.zip$ ]]; then takezip "$1"
@@ -361,7 +408,7 @@ cclaude() {
         nohup ccr start > /dev/null 2>&1 &
         disown; sleep 1
     fi
-    (eval "$(ccr activate)" && claude "$@")
+    (source <(command ccr activate) && claude "$@")
 }
 
 # ===========================================
@@ -373,7 +420,10 @@ fi
 
 zcompile_if_needed() {
   local file=$1
-  [[ -f "$file" && (! -f "$file.zwc" || "$file" -nt "$file.zwc") ]] && zcompile "$file"
+  if [[ -f "$file" && (! -f "$file.zwc" || "$file" -nt "$file.zwc") ]]; then
+    rm -f "$file.zwc"
+    zcompile "$file"
+  fi
 }
 (
   zcompile_if_needed ~/.zshrc
