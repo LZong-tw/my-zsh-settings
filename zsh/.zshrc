@@ -1,32 +1,118 @@
 # ===========================================
-# 0. GLOBAL FLAGS & CLAUDE CODE INTEGRATION
+# 0. GLOBAL FLAGS
 # ===========================================
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
-# Claude Code Agent 模式下直接進入極速模式
+# ===========================================
+# 1. ENVIRONMENT (needed by ALL modes, including agents)
+# ===========================================
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export PAGER='less'
+export LESS='-R'
+export AWS_REGION=ap-northeast-1
+export DOCKER_HOST="unix:///var/run/docker.sock"
+export ANTHROPIC_BASE_URL="https://llm-gateway.kkcompany-internal.com"
+export GITLAB_API_URL="https://gitlab.kkinternal.com"
+
+# PATH
+export NVM_DIR="$HOME/.nvm"
+# Eagerly add NVM default node bin to PATH (so subprocesses like npx work)
+if [[ -s "$NVM_DIR/alias/default" ]]; then
+  _nvm_ver=$(< "$NVM_DIR/alias/default")
+  _nvm_node_bin="$NVM_DIR/versions/node/v${_nvm_ver#v}/bin"
+  [[ -d "$_nvm_node_bin" ]] || _nvm_node_bin=""
+fi
+[[ -z "${_nvm_node_bin:-}" ]] && _nvm_node_bin="$(ls -d "$NVM_DIR/versions/node/"*/bin 2>/dev/null | sort -V | tail -1)"
+[[ -n "$_nvm_node_bin" ]] && export PATH="$_nvm_node_bin:$PATH"
+unset _nvm_ver _nvm_node_bin
+export PATH="$HOME/.composer/vendor/bin:$HOME/.local/bin:$HOME/.antigravity/antigravity/bin:$HOME/.bun/bin:$HOME/go/bin:$PATH"
+
+# API secrets: Keychain cache → 1Password fallback
+# Flow: Keychain hit → instant (no Touch ID). Miss → op read (Touch ID once) → cache to Keychain.
+_op_secrets_loaded=0
+_secret_keys=(anthropic_auth_token gitlab_personal_access_token pagerduty_api_key pagerduty_user_api_key)
+_secret_envs=(ANTHROPIC_AUTH_TOKEN GITLAB_PERSONAL_ACCESS_TOKEN PAGERDUTY_API_KEY PAGERDUTY_USER_API_KEY)
+
+_keychain_read()  { security find-generic-password -a "$USER" -s "zsh-$1" -w 2>/dev/null; }
+_keychain_write() { security add-generic-password -a "$USER" -s "zsh-$1" -w "$2" -U 2>/dev/null; }
+
+load-secrets() {
+    [[ $_op_secrets_loaded -eq 1 ]] && return
+    local _i _key _env _val _need_op=0
+
+    # 1) Try Keychain first (instant, no auth)
+    for _i in {1..${#_secret_keys}}; do
+        _key=${_secret_keys[$_i]}
+        _env=${_secret_envs[$_i]}
+        _val=$(_keychain_read "$_key")
+        if [[ -n "$_val" ]]; then
+            export "$_env=$_val"
+        else
+            _need_op=1
+            break
+        fi
+    done
+
+    # 2) Keychain miss → fetch all from 1Password (Touch ID once) → cache
+    if [[ $_need_op -eq 1 ]]; then
+        local _t
+        _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[1]}" --no-newline) || return 1
+        export "${_secret_envs[1]}=$_t"
+        _keychain_write "${_secret_keys[1]}" "$_t"
+        for _i in {2..${#_secret_keys}}; do
+            _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[$_i]}" --no-newline 2>/dev/null)
+            export "${_secret_envs[$_i]}=$_t"
+            _keychain_write "${_secret_keys[$_i]}" "$_t"
+        done
+    fi
+    _op_secrets_loaded=1
+}
+
+# refresh-secrets: force re-fetch from 1Password and update Keychain cache
+refresh-secrets() {
+    _op_secrets_loaded=0
+    local _i _t
+    for _i in {1..${#_secret_keys}}; do
+        _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[$_i]}" --no-newline) || return 1
+        export "${_secret_envs[$_i]}=$_t"
+        _keychain_write "${_secret_keys[$_i]}" "$_t"
+    done
+    _op_secrets_loaded=1
+    echo "Secrets refreshed from 1Password → Keychain."
+}
+
+load-secrets
+
+# ===========================================
+# 2. AGENT FAST-PATH (skip interactive UI)
+# ===========================================
 if [[ -n "$CLAUDE_CODE_AGENT_ID" ]]; then
     PROMPT='%~ $ '
     return
 fi
 
+# ===================================================================
+# BELOW THIS LINE: INTERACTIVE MODE ONLY
+# ===================================================================
+
 # ===========================================
-# 1. TMUX & ITERM2 CONTROL MODE (-CC) DETECTION
+# 3. TMUX & ITERM2 CONTROL MODE (-CC) DETECTION
 # ===========================================
 if [[ "$TERM" == "screen" || "$TERM" == "tmux" || -n "$TMUX" ]]; then
     export ITERMS_SHELL_INTEGRATION_SKIPPED=1
 fi
 
 # ===========================================
-# 2. POWERLEVEL10K INSTANT PROMPT
+# 4. POWERLEVEL10K INSTANT PROMPT
 # ===========================================
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
+
 # ===========================================
-# 3. CORE ZSH SETTINGS (no OMZ framework)
+# 5. CORE ZSH SETTINGS (no OMZ framework)
 # ===========================================
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
 
 # --- History (from lib/history.zsh) ---
 HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
@@ -53,8 +139,6 @@ autoload -Uz url-quote-magic bracketed-paste-magic
 zle -N self-insert url-quote-magic
 zle -N bracketed-paste bracketed-paste-magic
 setopt multios long_list_jobs interactivecomments
-export PAGER='less'
-export LESS='-R'
 
 # --- Theme support (from lib/theme-and-appearance.zsh) ---
 autoload -U colors && colors
@@ -101,7 +185,7 @@ function _set_terminal_cwd { printf "\e]7;file://%s%s\a" "$HOST" "${PWD// /%20}"
 add-zsh-hook precmd _set_terminal_cwd
 
 # ===========================================
-# 4. COMPLETION
+# 6. COMPLETION
 # ===========================================
 zmodload -i zsh/complist
 WORDCHARS=''
@@ -111,6 +195,12 @@ else
   SHORT_HOST="${HOST/.*/}"
 fi
 export ZSH_COMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
+# Add plugin completion directories to fpath
+fpath=(
+  $HOME/.oh-my-zsh/plugins/extract
+  $HOME/.oh-my-zsh/plugins/z
+  $fpath
+)
 autoload -Uz compinit
 if [[ -n "$ZSH_COMPDUMP"(#qN.m-1) ]]; then
   compinit -C -d "$ZSH_COMPDUMP"
@@ -130,7 +220,7 @@ zstyle ':completion:*' cache-path "${ZSH_COMPDUMP:h}/.zcompcache"
 zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-]#)*=01;34=0=01'
 
 # ===========================================
-# 4.5. PLUGINS (direct source, no framework)
+# 7. PLUGINS (direct source, no framework)
 # ===========================================
 _omz="$HOME/.oh-my-zsh"
 source "$_omz/custom/themes/powerlevel10k/powerlevel10k.zsh-theme"
@@ -142,6 +232,11 @@ source "$_omz/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
 # syntax-highlighting must be last
 source "$_omz/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 unset _omz
+
+# ===========================================
+# 8. ALIASES
+# ===========================================
+# Git
 alias g='git'
 alias ga='git add'
 alias gaa='git add --all'
@@ -152,6 +247,8 @@ alias gd='git diff'
 alias gl='git pull'
 alias gp='git push'
 alias gst='git status'
+alias gs='git status'
+alias glog='git log --oneline --graph -20'
 
 # Docker & Compose
 alias d='docker'
@@ -162,6 +259,8 @@ alias dex='docker exec -it'
 alias dlogs='docker compose logs -f'
 alias dps='docker compose ps'
 alias dup='docker compose up -d'
+alias dc='docker compose'
+alias docker=podman
 
 # Composer & Laravel
 alias c='composer'
@@ -172,54 +271,20 @@ alias art='php artisan'
 alias pa='php artisan'
 alias mfs='php artisan migrate:fresh --seed'
 
-# AWS & Kubectl (Lazy Load Completions)
-kubectl() {
-  unfunction kubectl
-  source <(command kubectl completion zsh)
-  command kubectl "$@"
-}
-aws() {
-  unfunction aws
-  complete -C '/usr/local/bin/aws_zsh_completer' aws
-  command aws "$@"
-}
-
-# ===========================================
-# 5. MODERN TOOLS & ALIASES
-# ===========================================
-export PATH="$HOME/.composer/vendor/bin:$HOME/.local/bin:$HOME/.antigravity/antigravity/bin:$HOME/.bun/bin:$HOME/go/bin:$PATH"
-
-# API & Tokens (secrets from 1Password, loaded on demand)
-export ANTHROPIC_BASE_URL="https://llm-gateway.kkcompany-internal.com"
-export GITLAB_API_URL="https://gitlab.kkinternal.com"
-_op_secrets_loaded=0
-load-secrets() {
-    [[ $_op_secrets_loaded -eq 1 ]] && return
-    export ANTHROPIC_AUTH_TOKEN=$(op read "op://Employee/CLI API Keys/anthropic_auth_token" --no-newline)
-    export GITLAB_PERSONAL_ACCESS_TOKEN=$(op read "op://Employee/CLI API Keys/gitlab_personal_access_token" --no-newline)
-    export PAGERDUTY_API_KEY=$(op read "op://Employee/CLI API Keys/pagerduty_api_key" --no-newline)
-    export PAGERDUTY_USER_API_KEY=$(op read "op://Employee/CLI API Keys/pagerduty_user_api_key" --no-newline)
-    _op_secrets_loaded=1
-    echo "Secrets loaded from 1Password."
-}
-# Auto-load if op session is active (non-blocking check)
-op whoami &>/dev/null && load-secrets
-export AWS_REGION=ap-northeast-1
-export DOCKER_HOST="unix:///var/run/docker.sock"
-
 # Grep defaults: color + exclude common dirs
 alias grep="grep --color=auto --exclude-dir={.bzr,CVS,.git,.hg,.svn,.idea,.tox,.venv,venv,node_modules,vendor}"
 alias egrep="grep -E"
 alias fgrep="grep -F"
 
-# Aliases
+# Network & SSH
 alias niceboat='ssh niceboat.kkinternal-dev.com'
 alias voyager='ssh voyager.kkinternal.com'
 alias myip="curl http://ipecho.net/plain; echo"
 alias ports="lsof -PiTCP -sTCP:LISTEN"
 alias ports_full="ss -tulanp"
-alias killport='f(){ lsof -ti:$1 | xargs kill -9; }; f'
+killport() { lsof -ti:"$1" | xargs kill -9; }
 
+# ls / eza
 if (( $+commands[eza] )); then
   alias ls="eza --icons --git"
   alias ll="eza -l --icons --git"
@@ -229,14 +294,23 @@ else
   alias la="ls -lAh"
 fi
 
-alias gs='git status'
-alias glog='git log --oneline --graph -20'
-alias dc='docker compose'
-alias docker=podman
 alias reload="exec zsh"
 
+# AWS & Kubectl (Lazy Load Completions)
+kubectl() {
+  unfunction kubectl
+  source <(command kubectl completion zsh)
+  command kubectl "$@"
+}
+aws() {
+  unfunction aws
+  autoload -U +X bashcompinit && bashcompinit
+  complete -C '/usr/local/bin/aws_completer' aws
+  command aws "$@"
+}
+
 # ===========================================
-# POWERFUL FUNCTIONS
+# 9. POWERFUL FUNCTIONS
 # ===========================================
 mysqlstat() { mysql -e "SHOW GLOBAL STATUS LIKE 'Threads%'; SHOW GLOBAL STATUS LIKE 'Queries'; SHOW GLOBAL STATUS LIKE 'Slow_queries';"; }
 mysqlproc() { mysql -e "SHOW FULL PROCESSLIST;"; }
@@ -264,9 +338,10 @@ take() {
 zsh_stats() { fc -l 1 | awk '{CMD[$2]++;count++} END {for(a in CMD) print CMD[a],CMD[a]*100/count"%",a}' | grep -v './' | sort -nr | head -20 | column -c3 -s' ' -t | nl }
 
 # ===========================================
-# 6. NVM LAZY LOAD
+# 10. NVM LAZY LOAD (interactive wrappers)
 # ===========================================
-export NVM_DIR="$HOME/.nvm"
+# NVM_DIR and PATH already set in section 1.
+# These wrappers ensure `nvm` itself (the version manager) lazy-loads on first use.
 _nvm_lazy_cmds=(nvm node npm npx yarn pnpm gemini codex)
 _load_nvm() {
     unset -f $_nvm_lazy_cmds 2>/dev/null
@@ -279,7 +354,7 @@ done
 unset _cmd
 
 # ===========================================
-# 7. CLAUDE CODE ROUTER
+# 11. CLAUDE CODE ROUTER
 # ===========================================
 cclaude() {
     if ! ccr status &>/dev/null; then
@@ -290,7 +365,7 @@ cclaude() {
 }
 
 # ===========================================
-# 8. BACKGROUND TASKS
+# 12. BACKGROUND TASKS
 # ===========================================
 if [[ -z "$ITERMS_SHELL_INTEGRATION_SKIPPED" ]]; then
     [[ -e "${HOME}/.iterm2_shell_integration.zsh" ]] && source "${HOME}/.iterm2_shell_integration.zsh"
@@ -306,7 +381,7 @@ zcompile_if_needed() {
 ) &!
 
 # ===========================================
-# 9. FINISH
+# 13. FINISH
 # ===========================================
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && . "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
