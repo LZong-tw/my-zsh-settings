@@ -1,82 +1,77 @@
 # zsh Configuration Repository
 
-This repository contains a configurable zsh setup that you can easily apply on a new machine or environment.
-
-Enjoy your zsh configuration!
+This repo keeps the shared shell behavior in git and pushes machine- or org-specific values into local override files.
 
 ## Goals
-- Easy install and update
-- Centralized config (version-controlled)
-- Easy to extend with plugins, aliases, and functions
+- Keep the main zsh behavior version-controlled
+- Keep secrets, endpoints, and personal paths out of git
+- Make it easy to rebuild the same workflow on a new machine
 
 ## Repository layout
-- `zsh/.zshrc` — Main zsh configuration template
-- `install.sh` — Installer script that backs up any existing `~/.zshrc` and symlinks the one from this repository
+- `zsh/.zshrc` — shared zsh configuration
+- `zsh/.zshrc.local.example` — template for machine- or org-specific overrides
+- `install.sh` — backs up `~/.zshrc`, symlinks the shared config, and seeds `~/.zshrc.local`
+- `CLAUDE.md` — Claude Code, 1Password, and tmux -CC notes
+- `examples/claude-api-key-helper.sh.example` — sample `apiKeyHelper` script
 
-## Prerequisites
-- zsh (preferred) installed
-- git installed
-- Oh My Zsh (recommended). The installer can optionally auto-install Oh My Zsh for you if it's missing.
+## What should be committed
+- Shared shell behavior, aliases, wrappers, tmux helpers, completion tuning
+- Docs and example files
+
+## What should stay local
+- `~/.zshrc.local`
+- `~/.claude/settings.local.json` or `~/.claude/settings.json`
+- `~/.claude/api-key-helper.sh`
+- Any 1Password item paths, raw credentials, or internal-only endpoints you do not want in git
 
 ## Quick install
 ```bash
-# Clone repository
 git clone https://github.com/LZong-tw/my-zsh-settings.git
 cd ~/my-zsh-settings
-
-# Run the installer. This will:
-# 1) backup any existing ~/.zshrc to ~/.zshrc.backup-<timestamp>
-# 2) symlink the project zsh/.zshrc to ~/.zshrc
 ./install.sh
 ```
 
-To also automatically install recommended theme and plugins, run:
+`install.sh` will:
+1. Back up any existing `~/.zshrc`
+2. Symlink `zsh/.zshrc` to `~/.zshrc`
+3. Copy `zsh/.zshrc.local.example` to `~/.zshrc.local` if it does not already exist
+
+## After install
+1. Edit `~/.zshrc.local`
+2. Fill in your real endpoints and 1Password references
+3. Reload with `exec zsh`
+
+## Optional plugin install
+```bash
+./install.sh --with-plugins
+```
+
+Manual equivalents:
 
 ```bash
-# Option 1: Run the script with the optional flag to install plugins/themes
-./install.sh --with-plugins
-
-# Option 2: Or run these commands manually if you prefer to do it yourself:
 git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 ```
 
-## Usage
-- Edit `zsh/.zshrc` in this repo to adjust settings, aliases and functions.
-- After editing the repo version, reload your shell configuration with:
+## iTerm2 and tmux -CC
+- Install iTerm2 shell integration:
+
 ```bash
-source ~/.zshrc
+curl -L https://iterm2.com/shell_integration/zsh -o ~/.iterm2_shell_integration.zsh
 ```
 
+- Use `tmuxcc` to start `tmux -CC`
+- Run `claude` inside that session
+- If Claude should manage panes itself, run `claude --tmux` outside `tmuxcc`
+
+More detail is in `CLAUDE.md`.
+
 ## Reverting
-If you want to restore the original `~/.zshrc` that was backed up by the installer, simply move it back:
 ```bash
 mv ~/.zshrc.backup-<timestamp> ~/.zshrc
 ```
 
-## Notes
-- The sample `zsh/.zshrc` already references `powerlevel10k` as the theme and enables `zsh-autosuggestions` and `zsh-syntax-highlighting` in the `plugins` array. Installing the theme and plugins as shown above will allow those lines to take effect.
-- This project purposefully symlinks your home `~/.zshrc` to `zsh/.zshrc` inside this repo so you can manage it with version control.
-
-- ### Recommended terminal experience: This configuration looks best in iTerm2 with the "Solarized Dark" color scheme (use a Powerline-compatible font for the Powerlevel10k prompt).
-
-  This configuration also includes support for **iTerm2 Shell Integration**, which enables features like command history and alerts. To use it, you need to install the integration script first. There are two common ways to do this:
-
-  - **Easy Method:** In iTerm2, go to the menu `iTerm2` > `Install Shell Integration`.
-  - **Manual Method:** Run the following command in your terminal:
-    ```bash
-    curl -L https://iterm2.com/shell_integration/zsh -o ~/.iterm2_shell_integration.zsh
-    ```
-  Once the script is installed, this `.zshrc` will automatically load it on startup.
-
-- The `install.sh` installer will attempt to auto-install Oh My Zsh if it is not found on the system; to opt out, run:
-```bash
-./install.sh --no-oh-my-zsh
-```
-
-Flags summary:
-- `--with-plugins`: clone Powerlevel10k, zsh-autosuggestions and zsh-syntax-highlighting into `${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}`
+## Flags
+- `--with-plugins`: clone Powerlevel10k, zsh-autosuggestions, and zsh-syntax-highlighting
 - `--no-oh-my-zsh`: skip automatic Oh My Zsh installation
-
-````

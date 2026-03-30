@@ -4,6 +4,8 @@ set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_ZSHRC="$HOME/.zshrc"
 SOURCE_ZSHRC="$PROJECT_DIR/zsh/.zshrc"
+TARGET_LOCAL_ZSHRC="$HOME/.zshrc.local"
+SOURCE_LOCAL_ZSHRC_EXAMPLE="$PROJECT_DIR/zsh/.zshrc.local.example"
 BACKUP_ZSHRC="$HOME/.zshrc.backup-$(date +%Y%m%d-%H%M%S)"
 INSTALL_PLUGINS=false
 INSTALL_OMZ=true
@@ -57,17 +59,23 @@ if [[ "$INSTALL_OMZ" = true ]]; then
 fi
 
 # Now backup and symlink the user's zshrc from the repo.
-if [[ -f "$TARGET_ZSHRC" || -L "$TARGET_ZSHRC" ]]; then
+if [[ -L "$TARGET_ZSHRC" && "$(readlink "$TARGET_ZSHRC")" == "$SOURCE_ZSHRC" ]]; then
+  echo "~/.zshrc already points to $SOURCE_ZSHRC"
+elif [[ -f "$TARGET_ZSHRC" || -L "$TARGET_ZSHRC" ]]; then
   echo "Existing ~/.zshrc detected, backing up to: $BACKUP_ZSHRC"
   mv "$TARGET_ZSHRC" "$BACKUP_ZSHRC"
+  ln -s "$SOURCE_ZSHRC" "$TARGET_ZSHRC"
+  echo "Symlink created: $TARGET_ZSHRC -> $SOURCE_ZSHRC"
+else
+  ln -s "$SOURCE_ZSHRC" "$TARGET_ZSHRC"
+  echo "Symlink created: $TARGET_ZSHRC -> $SOURCE_ZSHRC"
 fi
 
-ln -s "$SOURCE_ZSHRC" "$TARGET_ZSHRC"
+if [[ ! -f "$TARGET_LOCAL_ZSHRC" && -f "$SOURCE_LOCAL_ZSHRC_EXAMPLE" ]]; then
+  cp "$SOURCE_LOCAL_ZSHRC_EXAMPLE" "$TARGET_LOCAL_ZSHRC"
+  echo "Created local override template: $TARGET_LOCAL_ZSHRC"
+fi
 
-echo "Symlink created: $TARGET_ZSHRC -> $SOURCE_ZSHRC"
-echo "Done! Restart your terminal or run: source ~/.zshrc"
-
-echo "Symlink created: $TARGET_ZSHRC -> $SOURCE_ZSHRC"
 echo "Done! Restart your terminal or run: source ~/.zshrc"
 
 if [[ "$INSTALL_PLUGINS" = true ]]; then

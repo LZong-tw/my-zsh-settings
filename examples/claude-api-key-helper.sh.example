@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+OP_BIN=${OP_BIN:-/opt/homebrew/bin/op}
+if [ ! -x "$OP_BIN" ]; then
+  OP_BIN=$(command -v op 2>/dev/null || true)
+fi
+
+if [ -z "${OP_BIN:-}" ] || [ ! -x "$OP_BIN" ]; then
+  echo "op not found" >&2
+  exit 127
+fi
+
+OP_SECRET_REF=${ANTHROPIC_AUTH_TOKEN_OP_REF:-}
+if [ -z "$OP_SECRET_REF" ]; then
+  echo "Set ANTHROPIC_AUTH_TOKEN_OP_REF before using this helper." >&2
+  exit 1
+fi
+
+exec "$OP_BIN" read "$OP_SECRET_REF" --no-newline

@@ -10,10 +10,8 @@ export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 export PAGER='less'
 export LESS='-R'
-export AWS_REGION=ap-northeast-1
 export DOCKER_HOST="unix:///var/run/docker.sock"
-export ANTHROPIC_BASE_URL="https://llm-gateway.kkcompany-internal.com"
-export GITLAB_API_URL="https://gitlab.kkinternal.com"
+# Put machine- or org-specific exports in ~/.zshrc.local.
 
 # PATH
 export NVM_DIR="$HOME/.nvm"
@@ -30,73 +28,47 @@ unset _nvm_ver _nvm_node_bin
 path=("${(@)path:#(|./*|[^/]*)}")
 export PATH="$HOME/.composer/vendor/bin:$HOME/.local/bin:$HOME/.antigravity/antigravity/bin:$HOME/.bun/bin:$HOME/go/bin:$PATH"
 
-# API secrets: Keychain cache → 1Password fallback
-# Flow: Keychain hit → instant (no Touch ID). Miss → op read (Touch ID once) → cache to Keychain.
-_op_secrets_loaded=0
-_secret_keys=(anthropic_auth_token gitlab_personal_access_token pagerduty_api_key pagerduty_user_api_key)
+# API secrets: resolve on demand via 1Password secret references.
+# Shell startup stays fast and plaintext secrets only exist in child processes launched through `with-secrets`.
 _secret_envs=(ANTHROPIC_AUTH_TOKEN GITLAB_PERSONAL_ACCESS_TOKEN PAGERDUTY_API_KEY PAGERDUTY_USER_API_KEY)
+_secret_ref_vars=(
+    ANTHROPIC_AUTH_TOKEN_OP_REF
+    GITLAB_PERSONAL_ACCESS_TOKEN_OP_REF
+    PAGERDUTY_API_KEY_OP_REF
+    PAGERDUTY_USER_API_KEY_OP_REF
+)
 
-_keychain_read()  { security find-generic-password -a "$USER" -s "zsh-$1" -w 2>/dev/null; }
-_keychain_write() { security add-generic-password -a "$USER" -s "zsh-$1" -w "$2" -U; }
+with-secrets() {
+    [[ $# -gt 0 ]] || { echo "Usage: with-secrets <command> [args...]"; return 1; }
 
-load-secrets() {
-    [[ $_op_secrets_loaded -eq 1 ]] && return
-    local _i _key _env _val _need_op=0
-
-    # 1) Try Keychain first (instant, no auth) — collect all before exporting
-    local -a _cached_vals
-    for _i in {1..${#_secret_keys}}; do
-        _val=$(_keychain_read "${_secret_keys[$_i]}")
-        if [[ -n "$_val" ]]; then
-            _cached_vals+=("$_val")
+    local _i _env _current _ref_var _ref_value
+    local -a _env_args
+    for _i in {1..${#_secret_envs}}; do
+        _env=${_secret_envs[$_i]}
+        _current="${(P)_env}"
+        _ref_var=${_secret_ref_vars[$_i]}
+        _ref_value="${(P)_ref_var}"
+        if [[ -n "$_current" ]]; then
+            _env_args+=("${_env}=${_current}")
+        elif [[ -n "$_ref_value" ]]; then
+            _env_args+=("${_env}=${_ref_value}")
         else
-            _need_op=1
-            break
+            echo "Missing secret reference for ${_env}. Set ${_ref_var} in ~/.zshrc.local or export ${_env} before running with-secrets." >&2
+            return 1
         fi
     done
 
-    if [[ $_need_op -eq 0 ]]; then
-        # All from Keychain — commit
-        for _i in {1..${#_secret_keys}}; do
-            export "${_secret_envs[$_i]}=${_cached_vals[$_i]}"
-        done
-    else
-        # 2) Keychain miss → fetch ALL from 1Password, then commit atomically
-        local _t
-        local -a _new_vals
-        for _i in {1..${#_secret_keys}}; do
-            _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[$_i]}" --no-newline) || return 1
-            _new_vals+=("$_t")
-        done
-        for _i in {1..${#_secret_keys}}; do
-            export "${_secret_envs[$_i]}=${_new_vals[$_i]}"
-            _keychain_write "${_secret_keys[$_i]}" "${_new_vals[$_i]}" || true
-        done
-    fi
-    _op_secrets_loaded=1
+    env "${_env_args[@]}" command op run -- "$@"
 }
 
-# refresh-secrets: atomic re-fetch — only update Keychain if ALL succeed
+load-secrets() {
+    echo "Secrets are resolved on demand."
+    echo "Use: with-secrets <command> [args...]"
+}
+
 refresh-secrets() {
-    local _i _t
-    local -a _new_vals
-    for _i in {1..${#_secret_keys}}; do
-        _t=$(op read "op://Employee/CLI API Keys/${_secret_keys[$_i]}" --no-newline) || {
-            echo "Failed to read ${_secret_keys[$_i]} from 1Password. Aborted, nothing changed."
-            return 1
-        }
-        _new_vals+=("$_t")
-    done
-    # All reads succeeded → commit to env + Keychain
-    for _i in {1..${#_secret_keys}}; do
-        export "${_secret_envs[$_i]}=${_new_vals[$_i]}"
-        _keychain_write "${_secret_keys[$_i]}" "${_new_vals[$_i]}" || true
-    done
-    _op_secrets_loaded=1
-    echo "Secrets refreshed from 1Password → Keychain."
+    load-secrets
 }
-
-load-secrets
 
 # ===========================================
 # 2. AGENT FAST-PATH (skip interactive UI)
@@ -114,7 +86,11 @@ fi
 # 3. TMUX & ITERM2 CONTROL MODE (-CC) DETECTION
 # ===========================================
 if [[ "$TERM" == "screen" || "$TERM" == "tmux" || -n "$TMUX" ]]; then
-    export ITERMS_SHELL_INTEGRATION_SKIPPED=1
+    if [[ -n "${ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX:-}" ]]; then
+        unset ITERMS_SHELL_INTEGRATION_SKIPPED
+    else
+        export ITERMS_SHELL_INTEGRATION_SKIPPED=1
+    fi
 fi
 
 # ===========================================
@@ -224,17 +200,58 @@ else
   SHORT_HOST="${HOST/.*/}"
 fi
 export ZSH_COMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
+_completion_refresh_stamp="${ZSH_COMPDUMP}.refresh"
+_completion_refresh_interval=86400
 # Add plugin completion directories to fpath
 fpath=(
   $HOME/.oh-my-zsh/plugins/extract
   $fpath
 )
+
+_now_epoch() {
+  if (( ${+EPOCHSECONDS} )); then
+    print -r -- "$EPOCHSECONDS"
+  else
+    date +%s
+  fi
+}
+
+_mark_completion_refresh() {
+  print -r -- "$(_now_epoch)" >| "$_completion_refresh_stamp"
+}
+
+_completion_refresh_needed() {
+  [[ ! -s "$ZSH_COMPDUMP" ]] && return 0
+  [[ -r "$_completion_refresh_stamp" ]] || return 0
+
+  local _stamp_epoch _now
+  _stamp_epoch=$(<"$_completion_refresh_stamp")
+  [[ "$_stamp_epoch" == <-> ]] || return 0
+  _now=$(_now_epoch)
+  (( _now - _stamp_epoch >= _completion_refresh_interval ))
+}
+
+_refresh_completions_if_needed() {
+  _completion_refresh_needed || return 0
+  compinit -i -d "$ZSH_COMPDUMP"
+  _mark_completion_refresh
+}
+
 autoload -Uz compinit
-if [[ -n "$ZSH_COMPDUMP"(#qN.m-1) ]]; then
+if [[ -s "$ZSH_COMPDUMP" ]]; then
   compinit -C -d "$ZSH_COMPDUMP"
+  _refresh_completions_if_needed
 else
   compinit -i -d "$ZSH_COMPDUMP"
+  _mark_completion_refresh
 fi
+
+rebuild-completions() {
+  rm -f "$ZSH_COMPDUMP" "$ZSH_COMPDUMP.zwc" "$_completion_refresh_stamp"
+  autoload -Uz compinit
+  compinit -i -d "$ZSH_COMPDUMP"
+  _mark_completion_refresh
+}
 # Options
 unsetopt menu_complete flowcontrol
 setopt auto_menu complete_in_word always_to_end
@@ -323,6 +340,7 @@ else
 fi
 
 alias reload="exec zsh"
+tmuxcc() { ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX=1 command tmux -CC "$@"; }
 
 # AWS & Kubectl (Lazy Load: first Tab OR first run triggers completion load)
 kubectl() {
@@ -400,6 +418,20 @@ for _cmd in $_nvm_lazy_cmds; do
 done
 unset _cmd
 
+claude() {
+    local _bin
+    _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
+    # Claude auth is handled natively via ~/.claude/settings.json apiKeyHelper.
+    # Clear inherited auth-token env so parent processes can't override the helper.
+    env -u ANTHROPIC_AUTH_TOKEN "$_bin" "$@"
+}
+
+devops() {
+    local _bin
+    _bin=$(whence -p devops) || { echo "devops not found" >&2; return 127; }
+    with-secrets "$_bin" "$@"
+}
+
 # ===========================================
 # 11. CLAUDE CODE ROUTER
 # ===========================================
@@ -412,7 +444,12 @@ cclaude() {
 }
 
 # ===========================================
-# 12. BACKGROUND TASKS
+# 12. LOCAL OVERRIDES
+# ===========================================
+[[ -r "${HOME}/.zshrc.local" ]] && source "${HOME}/.zshrc.local"
+
+# ===========================================
+# 13. BACKGROUND TASKS
 # ===========================================
 if [[ -z "$ITERMS_SHELL_INTEGRATION_SKIPPED" ]]; then
     [[ -e "${HOME}/.iterm2_shell_integration.zsh" ]] && source "${HOME}/.iterm2_shell_integration.zsh"
@@ -422,17 +459,23 @@ zcompile_if_needed() {
   local file=$1
   if [[ -f "$file" && (! -f "$file.zwc" || "$file" -nt "$file.zwc") ]]; then
     rm -f "$file.zwc"
-    zcompile "$file"
+    zcompile "$file" >/dev/null 2>&1
   fi
 }
-(
-  zcompile_if_needed ~/.zshrc
-  zcompile_if_needed ~/.p10k.zsh
-) &!
+zcompile_if_needed ~/.zshrc
+zcompile_if_needed ~/.p10k.zsh
 
 # ===========================================
-# 13. FINISH
+# 14. FINISH
 # ===========================================
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && . "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
-[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)" || true
+if [[ "$TERM_PROGRAM" == "kiro" ]]; then
+    _kiro_shell_integration="/Applications/Kiro.app/Contents/Resources/app/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh"
+    if [[ -r "$_kiro_shell_integration" ]]; then
+        . "$_kiro_shell_integration"
+    elif (( $+commands[kiro] )); then
+        . "$(kiro --locate-shell-integration-path zsh)"
+    fi
+    unset _kiro_shell_integration
+fi
