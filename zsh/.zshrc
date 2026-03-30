@@ -2,6 +2,45 @@
 # 0. GLOBAL FLAGS
 # ===========================================
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+zmodload zsh/datetime 2>/dev/null || true
+typeset -ga _zsh_startup_marks=()
+_zsh_startup_t0=${EPOCHREALTIME:-0}
+
+_zsh_startup_mark() {
+    [[ -n "${_zsh_startup_t0:-}" ]] || return 0
+    _zsh_startup_marks+=("$1:${EPOCHREALTIME:-0}")
+}
+
+_zsh_startup_dump_if_slow() {
+    [[ -n "${_zsh_startup_t0:-}" ]] || return 0
+
+    local _end=${EPOCHREALTIME:-0}
+    local -F 6 _prev _cur _delta _total
+    _prev=$_zsh_startup_t0
+    _total=$((_end - _zsh_startup_t0))
+    (( _total >= 2.0 )) || return 0
+
+    local _cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+    [[ -d "$_cache_dir" ]] || mkdir -p "$_cache_dir" 2>/dev/null || return 0
+
+    {
+        printf '=== %s term=%s tmux=%s total=%.3fs pwd=%s ===\n' \
+            "$(date '+%Y-%m-%dT%H:%M:%S%z')" \
+            "${TERM_PROGRAM:-${TERM:-unknown}}" \
+            "${TMUX:+1}" \
+            "$_total" \
+            "$PWD"
+        local _mark _name
+        for _mark in "${_zsh_startup_marks[@]}"; do
+            _name=${_mark%%:*}
+            _cur=${_mark#*:}
+            _delta=$((_cur - _prev))
+            printf '  %7.3fs  %s\n' "$_delta" "$_name"
+            _prev=$_cur
+        done
+        printf '  %7.3fs  finish\n\n' "$((_end - _prev))"
+    } >>| "${_cache_dir}/zsh-slow-start.log"
+}
 
 # ===========================================
 # 1. ENVIRONMENT (needed by ALL modes, including agents)
@@ -69,12 +108,15 @@ load-secrets() {
 refresh-secrets() {
     load-secrets
 }
+_zsh_startup_mark env
 
 # ===========================================
 # 2. AGENT FAST-PATH (skip interactive UI)
 # ===========================================
 if [[ -n "$CLAUDE_CODE_AGENT_ID" ]]; then
     PROMPT='%~ $ '
+    _zsh_startup_mark agent-fast-path
+    _zsh_startup_dump_if_slow
     return
 fi
 
@@ -99,6 +141,7 @@ fi
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
+_zsh_startup_mark instant-prompt
 
 # ===========================================
 # 5. CORE ZSH SETTINGS (no OMZ framework)
@@ -252,6 +295,7 @@ rebuild-completions() {
   compinit -i -d "$ZSH_COMPDUMP"
   _mark_completion_refresh
 }
+_zsh_startup_mark completion
 # Options
 unsetopt menu_complete flowcontrol
 setopt auto_menu complete_in_word always_to_end
@@ -277,6 +321,7 @@ source "$_omz/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
 # syntax-highlighting must be last
 source "$_omz/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 unset _omz
+_zsh_startup_mark plugins
 
 # ===========================================
 # 8. ALIASES
@@ -442,11 +487,13 @@ cclaude() {
     fi
     (source <(command ccr activate) && claude "$@")
 }
+_zsh_startup_mark functions
 
 # ===========================================
 # 12. LOCAL OVERRIDES
 # ===========================================
 [[ -r "${HOME}/.zshrc.local" ]] && source "${HOME}/.zshrc.local"
+_zsh_startup_mark local-overrides
 
 # ===========================================
 # 13. BACKGROUND TASKS
@@ -464,6 +511,7 @@ zcompile_if_needed() {
 }
 zcompile_if_needed ~/.zshrc
 zcompile_if_needed ~/.p10k.zsh
+_zsh_startup_mark background
 
 # ===========================================
 # 14. FINISH
@@ -478,4 +526,14 @@ if [[ "$TERM_PROGRAM" == "kiro" ]]; then
         . "$(kiro --locate-shell-integration-path zsh)"
     fi
     unset _kiro_shell_integration
+fi
+_zsh_startup_mark finish-hooks
+_zsh_startup_dump_if_slow
+
+PNPM_HOME="${PNPM_HOME:-$HOME/Library/pnpm}"
+if [[ -d "$PNPM_HOME" ]]; then
+  case ":$PATH:" in
+    *":$PNPM_HOME:"*) ;;
+    *) export PATH="$PNPM_HOME:$PATH" ;;
+  esac
 fi
