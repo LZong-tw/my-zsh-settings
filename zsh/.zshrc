@@ -2,45 +2,13 @@
 # 0. GLOBAL FLAGS
 # ===========================================
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
-zmodload zsh/datetime 2>/dev/null || true
-typeset -ga _zsh_startup_marks=()
-_zsh_startup_t0=${EPOCHREALTIME:-0}
+typeset -U path PATH fpath FPATH
+[[ -r "${ZDOTDIR:-$HOME}/.zsh.startup-profiler.zsh" ]] && source "${ZDOTDIR:-$HOME}/.zsh.startup-profiler.zsh"
+(( $+functions[zsh_startup_profile_mark] )) || zsh_startup_profile_mark() { :; }
+(( $+functions[zsh_startup_profile_dump_if_slow] )) || zsh_startup_profile_dump_if_slow() { :; }
 
-_zsh_startup_mark() {
-    [[ -n "${_zsh_startup_t0:-}" ]] || return 0
-    _zsh_startup_marks+=("$1:${EPOCHREALTIME:-0}")
-}
-
-_zsh_startup_dump_if_slow() {
-    [[ -n "${_zsh_startup_t0:-}" ]] || return 0
-
-    local _end=${EPOCHREALTIME:-0}
-    local -F 6 _prev _cur _delta _total
-    _prev=$_zsh_startup_t0
-    _total=$((_end - _zsh_startup_t0))
-    (( _total >= 2.0 )) || return 0
-
-    local _cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
-    [[ -d "$_cache_dir" ]] || mkdir -p "$_cache_dir" 2>/dev/null || return 0
-
-    {
-        printf '=== %s term=%s tmux=%s total=%.3fs pwd=%s ===\n' \
-            "$(date '+%Y-%m-%dT%H:%M:%S%z')" \
-            "${TERM_PROGRAM:-${TERM:-unknown}}" \
-            "${TMUX:+1}" \
-            "$_total" \
-            "$PWD"
-        local _mark _name
-        for _mark in "${_zsh_startup_marks[@]}"; do
-            _name=${_mark%%:*}
-            _cur=${_mark#*:}
-            _delta=$((_cur - _prev))
-            printf '  %7.3fs  %s\n' "$_delta" "$_name"
-            _prev=$_cur
-        done
-        printf '  %7.3fs  finish\n\n' "$((_end - _prev))"
-    } >>| "${_cache_dir}/zsh-slow-start.log"
-}
+_zsh_startup_mark() { zsh_startup_profile_mark "$@"; }
+_zsh_startup_dump_if_slow() { zsh_startup_profile_dump_if_slow; }
 
 # ===========================================
 # 1. ENVIRONMENT (needed by ALL modes, including agents)
@@ -138,9 +106,8 @@ fi
 # ===========================================
 # 4. POWERLEVEL10K INSTANT PROMPT
 # ===========================================
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# Disabled: this preamble occasionally stalls for several seconds after the terminal
+# has been idle, while the rest of the shell now initializes quickly enough without it.
 _zsh_startup_mark instant-prompt
 
 # ===========================================
@@ -517,8 +484,8 @@ _zsh_startup_mark background
 # 14. FINISH
 # ===========================================
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-[[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && . "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
 if [[ "$TERM_PROGRAM" == "kiro" ]]; then
+    [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && . "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
     _kiro_shell_integration="/Applications/Kiro.app/Contents/Resources/app/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh"
     if [[ -r "$_kiro_shell_integration" ]]; then
         . "$_kiro_shell_integration"

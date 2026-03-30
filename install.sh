@@ -4,9 +4,12 @@ set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_ZSHRC="$HOME/.zshrc"
 SOURCE_ZSHRC="$PROJECT_DIR/zsh/.zshrc"
+TARGET_STARTUP_PROFILER="$HOME/.zsh.startup-profiler.zsh"
+SOURCE_STARTUP_PROFILER="$PROJECT_DIR/zsh/.zsh.startup-profiler.zsh"
 TARGET_LOCAL_ZSHRC="$HOME/.zshrc.local"
 SOURCE_LOCAL_ZSHRC_EXAMPLE="$PROJECT_DIR/zsh/.zshrc.local.example"
 BACKUP_ZSHRC="$HOME/.zshrc.backup-$(date +%Y%m%d-%H%M%S)"
+BACKUP_STARTUP_PROFILER="$HOME/.zsh.startup-profiler.zsh.backup-$(date +%Y%m%d-%H%M%S)"
 INSTALL_PLUGINS=false
 INSTALL_OMZ=true
 
@@ -69,6 +72,20 @@ elif [[ -f "$TARGET_ZSHRC" || -L "$TARGET_ZSHRC" ]]; then
 else
   ln -s "$SOURCE_ZSHRC" "$TARGET_ZSHRC"
   echo "Symlink created: $TARGET_ZSHRC -> $SOURCE_ZSHRC"
+fi
+
+if [[ -f "$SOURCE_STARTUP_PROFILER" ]]; then
+  if [[ -L "$TARGET_STARTUP_PROFILER" && "$(readlink "$TARGET_STARTUP_PROFILER")" == "$SOURCE_STARTUP_PROFILER" ]]; then
+    echo "~/.zsh.startup-profiler.zsh already points to $SOURCE_STARTUP_PROFILER"
+  elif [[ -f "$TARGET_STARTUP_PROFILER" || -L "$TARGET_STARTUP_PROFILER" ]]; then
+    echo "Existing ~/.zsh.startup-profiler.zsh detected, backing up to: $BACKUP_STARTUP_PROFILER"
+    mv "$TARGET_STARTUP_PROFILER" "$BACKUP_STARTUP_PROFILER"
+    ln -s "$SOURCE_STARTUP_PROFILER" "$TARGET_STARTUP_PROFILER"
+    echo "Symlink created: $TARGET_STARTUP_PROFILER -> $SOURCE_STARTUP_PROFILER"
+  else
+    ln -s "$SOURCE_STARTUP_PROFILER" "$TARGET_STARTUP_PROFILER"
+    echo "Symlink created: $TARGET_STARTUP_PROFILER -> $SOURCE_STARTUP_PROFILER"
+  fi
 fi
 
 if [[ ! -f "$TARGET_LOCAL_ZSHRC" && -f "$SOURCE_LOCAL_ZSHRC_EXAMPLE" ]]; then

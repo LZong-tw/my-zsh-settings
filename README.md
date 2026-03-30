@@ -9,6 +9,7 @@ This repo keeps the shared shell behavior in git and pushes machine- or org-spec
 
 ## Repository layout
 - `zsh/.zshrc` — shared zsh configuration
+- `zsh/.zsh.startup-profiler.zsh` — optional portable startup profiling module
 - `zsh/.zshrc.local.example` — template for machine- or org-specific overrides
 - `install.sh` — backs up `~/.zshrc`, symlinks the shared config, and seeds `~/.zshrc.local`
 - `CLAUDE.md` — Claude Code, 1Password, and tmux -CC notes
@@ -34,12 +35,24 @@ cd ~/my-zsh-settings
 `install.sh` will:
 1. Back up any existing `~/.zshrc`
 2. Symlink `zsh/.zshrc` to `~/.zshrc`
-3. Copy `zsh/.zshrc.local.example` to `~/.zshrc.local` if it does not already exist
+3. Symlink `zsh/.zsh.startup-profiler.zsh` to `~/.zsh.startup-profiler.zsh`
+4. Copy `zsh/.zshrc.local.example` to `~/.zshrc.local` if it does not already exist
 
 ## After install
 1. Edit `~/.zshrc.local`
 2. Fill in your real endpoints and 1Password references
 3. Reload with `exec zsh`
+
+## Optional startup profiling
+Add these to `~/.zshrc.local` only when you want profiling:
+
+```bash
+export ZSH_STARTUP_PROFILING=1
+export ZSH_STARTUP_PROFILE_THRESHOLD=1.0
+# export ZSH_STARTUP_PROFILE_LOG_PATH="$HOME/.cache/zsh-slow-start.log"
+```
+
+When enabled, both `~/.zprofile` and `~/.zshrc` can write phase timings through the portable module at `~/.zsh.startup-profiler.zsh`.
 
 ## Optional plugin install
 ```bash
