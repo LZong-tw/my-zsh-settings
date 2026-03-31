@@ -8,15 +8,19 @@ This repo keeps the shared shell behavior in git and pushes machine- or org-spec
 - Make it easy to rebuild the same workflow on a new machine
 
 ## Repository layout
+- `zsh/.zshenv` — minimal always-loaded zsh bootstrap
+- `zsh/.zprofile` — login-shell environment setup
 - `zsh/.zshrc` — shared zsh configuration
+- `zsh/.p10k.zsh` — Powerlevel10k prompt configuration
 - `zsh/.zsh.startup-profiler.zsh` — optional portable startup profiling module
 - `zsh/.zshrc.local.example` — template for machine- or org-specific overrides
-- `install.sh` — backs up `~/.zshrc`, symlinks the shared config, and seeds `~/.zshrc.local`
+- `install.sh` — backs up managed dotfiles, symlinks the shared config, and seeds `~/.zshrc.local`
 - `CLAUDE.md` — Claude Code, 1Password, and tmux -CC notes
 - `examples/claude-api-key-helper.sh.example` — sample `apiKeyHelper` script
 
 ## What should be committed
-- Shared shell behavior, aliases, wrappers, tmux helpers, completion tuning
+- Shared shell behavior across `.zshenv`, `.zprofile`, `.zshrc`, and `.p10k.zsh`
+- Aliases, wrappers, tmux helpers, prompt config, completion tuning
 - Docs and example files
 
 ## What should stay local
@@ -33,15 +37,17 @@ cd ~/my-zsh-settings
 ```
 
 `install.sh` will:
-1. Back up any existing `~/.zshrc`
-2. Symlink `zsh/.zshrc` to `~/.zshrc`
-3. Symlink `zsh/.zsh.startup-profiler.zsh` to `~/.zsh.startup-profiler.zsh`
-4. Copy `zsh/.zshrc.local.example` to `~/.zshrc.local` if it does not already exist
+1. Back up and symlink `~/.zshenv`
+2. Back up and symlink `~/.zprofile`
+3. Back up and symlink `~/.zshrc`
+4. Back up and symlink `~/.p10k.zsh`
+5. Back up and symlink `~/.zsh.startup-profiler.zsh`
+6. Copy `zsh/.zshrc.local.example` to `~/.zshrc.local` if it does not already exist
 
 ## After install
 1. Edit `~/.zshrc.local`
 2. Fill in your real endpoints and 1Password references
-3. Reload with `exec zsh`
+3. Reload with `exec zsh -l`
 
 ## Optional startup profiling
 Add these to `~/.zshrc.local` only when you want profiling:

@@ -2,14 +2,9 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_ZSHRC="$HOME/.zshrc"
-SOURCE_ZSHRC="$PROJECT_DIR/zsh/.zshrc"
-TARGET_STARTUP_PROFILER="$HOME/.zsh.startup-profiler.zsh"
-SOURCE_STARTUP_PROFILER="$PROJECT_DIR/zsh/.zsh.startup-profiler.zsh"
 TARGET_LOCAL_ZSHRC="$HOME/.zshrc.local"
 SOURCE_LOCAL_ZSHRC_EXAMPLE="$PROJECT_DIR/zsh/.zshrc.local.example"
-BACKUP_ZSHRC="$HOME/.zshrc.backup-$(date +%Y%m%d-%H%M%S)"
-BACKUP_STARTUP_PROFILER="$HOME/.zsh.startup-profiler.zsh.backup-$(date +%Y%m%d-%H%M%S)"
+TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INSTALL_PLUGINS=false
 INSTALL_OMZ=true
 
@@ -38,10 +33,33 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ ! -f "$SOURCE_ZSHRC" ]]; then
-  echo "Cannot find source zshrc: $SOURCE_ZSHRC" >&2
+if [[ ! -f "$PROJECT_DIR/zsh/.zshrc" ]]; then
+  echo "Cannot find source zshrc: $PROJECT_DIR/zsh/.zshrc" >&2
   exit 1
 fi
+
+link_managed_file() {
+  local source_path=$1
+  local target_path=$2
+  local label backup_path
+
+  [[ -f "$source_path" ]] || return 0
+
+  label="${target_path/#$HOME\//~/}"
+  backup_path="${target_path}.backup-${TIMESTAMP}"
+
+  if [[ -L "$target_path" && "$(readlink "$target_path")" == "$source_path" ]]; then
+    echo "$label already points to $source_path"
+  elif [[ -e "$target_path" || -L "$target_path" ]]; then
+    echo "Existing $label detected, backing up to: $backup_path"
+    mv "$target_path" "$backup_path"
+    ln -s "$source_path" "$target_path"
+    echo "Symlink created: $target_path -> $source_path"
+  else
+    ln -s "$source_path" "$target_path"
+    echo "Symlink created: $target_path -> $source_path"
+  fi
+}
 
 ZSH_DIR="${ZSH:-$HOME/.oh-my-zsh}"
 # If Oh My Zsh is missing and user did not opt-out, install it first.
@@ -61,39 +79,24 @@ if [[ "$INSTALL_OMZ" = true ]]; then
   fi
 fi
 
-# Now backup and symlink the user's zshrc from the repo.
-if [[ -L "$TARGET_ZSHRC" && "$(readlink "$TARGET_ZSHRC")" == "$SOURCE_ZSHRC" ]]; then
-  echo "~/.zshrc already points to $SOURCE_ZSHRC"
-elif [[ -f "$TARGET_ZSHRC" || -L "$TARGET_ZSHRC" ]]; then
-  echo "Existing ~/.zshrc detected, backing up to: $BACKUP_ZSHRC"
-  mv "$TARGET_ZSHRC" "$BACKUP_ZSHRC"
-  ln -s "$SOURCE_ZSHRC" "$TARGET_ZSHRC"
-  echo "Symlink created: $TARGET_ZSHRC -> $SOURCE_ZSHRC"
-else
-  ln -s "$SOURCE_ZSHRC" "$TARGET_ZSHRC"
-  echo "Symlink created: $TARGET_ZSHRC -> $SOURCE_ZSHRC"
-fi
+MANAGED_DOTFILES=(
+  ".zshenv"
+  ".zprofile"
+  ".zshrc"
+  ".p10k.zsh"
+  ".zsh.startup-profiler.zsh"
+)
 
-if [[ -f "$SOURCE_STARTUP_PROFILER" ]]; then
-  if [[ -L "$TARGET_STARTUP_PROFILER" && "$(readlink "$TARGET_STARTUP_PROFILER")" == "$SOURCE_STARTUP_PROFILER" ]]; then
-    echo "~/.zsh.startup-profiler.zsh already points to $SOURCE_STARTUP_PROFILER"
-  elif [[ -f "$TARGET_STARTUP_PROFILER" || -L "$TARGET_STARTUP_PROFILER" ]]; then
-    echo "Existing ~/.zsh.startup-profiler.zsh detected, backing up to: $BACKUP_STARTUP_PROFILER"
-    mv "$TARGET_STARTUP_PROFILER" "$BACKUP_STARTUP_PROFILER"
-    ln -s "$SOURCE_STARTUP_PROFILER" "$TARGET_STARTUP_PROFILER"
-    echo "Symlink created: $TARGET_STARTUP_PROFILER -> $SOURCE_STARTUP_PROFILER"
-  else
-    ln -s "$SOURCE_STARTUP_PROFILER" "$TARGET_STARTUP_PROFILER"
-    echo "Symlink created: $TARGET_STARTUP_PROFILER -> $SOURCE_STARTUP_PROFILER"
-  fi
-fi
+for dotfile in "${MANAGED_DOTFILES[@]}"; do
+  link_managed_file "$PROJECT_DIR/zsh/$dotfile" "$HOME/$dotfile"
+done
 
 if [[ ! -f "$TARGET_LOCAL_ZSHRC" && -f "$SOURCE_LOCAL_ZSHRC_EXAMPLE" ]]; then
   cp "$SOURCE_LOCAL_ZSHRC_EXAMPLE" "$TARGET_LOCAL_ZSHRC"
   echo "Created local override template: $TARGET_LOCAL_ZSHRC"
 fi
 
-echo "Done! Restart your terminal or run: source ~/.zshrc"
+echo "Done! Restart your terminal or run: exec zsh -l"
 
 if [[ "$INSTALL_PLUGINS" = true ]]; then
   echo "\nInstalling recommended theme and plugins..."

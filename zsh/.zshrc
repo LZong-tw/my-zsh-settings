@@ -6,6 +6,9 @@ typeset -U path PATH fpath FPATH
 [[ -r "${ZDOTDIR:-$HOME}/.zsh.startup-profiler.zsh" ]] && source "${ZDOTDIR:-$HOME}/.zsh.startup-profiler.zsh"
 (( $+functions[zsh_startup_profile_mark] )) || zsh_startup_profile_mark() { :; }
 (( $+functions[zsh_startup_profile_dump_if_slow] )) || zsh_startup_profile_dump_if_slow() { :; }
+_zsh_dotdir="${ZDOTDIR:-$HOME}"
+_zsh_local_override="${_zsh_dotdir}/.zshrc.local"
+_zsh_p10k_file="${_zsh_dotdir}/.p10k.zsh"
 
 _zsh_startup_mark() { zsh_startup_profile_mark "$@"; }
 _zsh_startup_dump_if_slow() { zsh_startup_profile_dump_if_slow; }
@@ -459,7 +462,7 @@ _zsh_startup_mark functions
 # ===========================================
 # 12. LOCAL OVERRIDES
 # ===========================================
-[[ -r "${HOME}/.zshrc.local" ]] && source "${HOME}/.zshrc.local"
+[[ -r "$_zsh_local_override" ]] && source "$_zsh_local_override"
 _zsh_startup_mark local-overrides
 
 # ===========================================
@@ -476,14 +479,14 @@ zcompile_if_needed() {
     zcompile "$file" >/dev/null 2>&1
   fi
 }
-zcompile_if_needed ~/.zshrc
-zcompile_if_needed ~/.p10k.zsh
+zcompile_if_needed "${_zsh_dotdir}/.zshrc"
+zcompile_if_needed "$_zsh_p10k_file"
 _zsh_startup_mark background
 
 # ===========================================
 # 14. FINISH
 # ===========================================
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+[[ ! -f "$_zsh_p10k_file" ]] || source "$_zsh_p10k_file"
 if [[ "$TERM_PROGRAM" == "kiro" ]]; then
     [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && . "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
     _kiro_shell_integration="/Applications/Kiro.app/Contents/Resources/app/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh"
