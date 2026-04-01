@@ -53,7 +53,12 @@ with-secrets() {
 
     local _i _env _current _ref_var _ref_value
     local -a _env_args
-    for _i in {1..${#_secret_envs}}; do
+    (( ${#_secret_envs} == ${#_secret_ref_vars} )) || {
+        echo "Secret config mismatch: _secret_envs and _secret_ref_vars differ in length." >&2
+        return 1
+    }
+
+    for (( _i = 1; _i <= ${#_secret_envs}; ++_i )); do
         _env=${_secret_envs[$_i]}
         _current="${(P)_env}"
         _ref_var=${_secret_ref_vars[$_i]}
