@@ -421,8 +421,9 @@ zsh_stats() { fc -l 1 | awk '{CMD[$2]++;count++} END {for(a in CMD) print CMD[a]
 # 10. NVM LAZY LOAD (interactive wrappers)
 # ===========================================
 # NVM_DIR and PATH already set in section 1.
-# These wrappers ensure `nvm` itself (the version manager) lazy-loads on first use.
-_nvm_lazy_cmds=(nvm node npm npx yarn pnpm gemini codex)
+# Default Node.js and its global CLIs are already on PATH above.
+# Only lazy-load `nvm` itself, which is a shell function provided by nvm.sh.
+_nvm_lazy_cmds=(nvm)
 _load_nvm() {
     unset -f $_nvm_lazy_cmds 2>/dev/null
     [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
