@@ -344,6 +344,7 @@ alias fgrep="grep -F"
 # Network & SSH
 alias niceboat='ssh niceboat.kkinternal-dev.com'
 alias voyager='ssh voyager.kkinternal.com'
+alias luna='cd ~/projects/luna/application'
 alias myip="curl http://ipecho.net/plain; echo"
 alias ports="lsof -PiTCP -sTCP:LISTEN"
 alias ports_full="netstat -an -p tcp"
