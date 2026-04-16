@@ -505,7 +505,6 @@ if [[ "$TERM_PROGRAM" == "kiro" ]]; then
     unset _kiro_shell_integration
 fi
 _zsh_startup_mark finish-hooks
-_zsh_startup_dump_if_slow
 
 PNPM_HOME="${PNPM_HOME:-$HOME/Library/pnpm}"
 if [[ -d "$PNPM_HOME" ]]; then
@@ -514,3 +513,25 @@ if [[ -d "$PNPM_HOME" ]]; then
     *) export PATH="$PNPM_HOME:$PATH" ;;
   esac
 fi
+
+# Google Cloud SDK: keep binaries on PATH, but lazy-load shell completion on first use.
+_gcloud_sdk_root="${GCLOUD_SDK_ROOT:-$HOME/google-cloud-sdk}"
+if [[ -d "$_gcloud_sdk_root/bin" ]]; then
+  case ":$PATH:" in
+    *":$_gcloud_sdk_root/bin:"*) ;;
+    *) export PATH="$_gcloud_sdk_root/bin:$PATH" ;;
+  esac
+
+  _load_gcloud_sdk_completion() {
+    unset -f gcloud bq gsutil 2>/dev/null
+    local _completion="${GCLOUD_SDK_ROOT:-$HOME/google-cloud-sdk}/completion.zsh.inc"
+    [[ -f "$_completion" ]] && . "$_completion"
+  }
+
+  gcloud() { _load_gcloud_sdk_completion; command gcloud "$@"; }
+  bq() { _load_gcloud_sdk_completion; command bq "$@"; }
+  gsutil() { _load_gcloud_sdk_completion; command gsutil "$@"; }
+fi
+unset _gcloud_sdk_root
+_zsh_startup_mark finish
+_zsh_startup_dump_if_slow
