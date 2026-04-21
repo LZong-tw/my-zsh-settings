@@ -7,10 +7,16 @@ export ANTHROPIC_BASE_URL="https://llm-gateway.example.internal"
 export GITLAB_API_URL="https://gitlab.example.internal"
 
 # 1Password secret references used by `with-secrets` and related wrappers.
-export ANTHROPIC_AUTH_TOKEN_OP_REF="op://Vault/Item/anthropic_auth_token"
+export ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT="op://Vault/Item/anthropic_auth_token"
+export ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1="op://Vault/Item/anthropic_auth_token_alt1"
+export ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT"
 export GITLAB_PERSONAL_ACCESS_TOKEN_OP_REF="op://Vault/Item/gitlab_personal_access_token"
 export PAGERDUTY_API_KEY_OP_REF="op://Vault/Item/pagerduty_api_key"
 export PAGERDUTY_USER_API_KEY_OP_REF="op://Vault/Item/pagerduty_user_api_key"
+
+claude-alt1() {
+  ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1" claude "$@"
+}
 
 # Optional local PATH, aliases, or helper functions.
 # export PATH="$HOME/bin:$PATH"
