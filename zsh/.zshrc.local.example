@@ -3,7 +3,10 @@
 
 # Machine- or org-specific exports.
 export AWS_REGION="ap-northeast-1"
-export ANTHROPIC_BASE_URL="https://llm-gateway.example.internal"
+export ANTHROPIC_BASE_URL_DEFAULT="https://llm-gateway.example.internal"
+export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
+# Claude Code appends /v1/messages; include any gateway prefix needed before /v1.
+# export ANTHROPIC_BASE_URL_ALT1="https://alt-gateway.example.internal/api"
 export GITLAB_API_URL="https://gitlab.example.internal"
 
 # 1Password secret references used by `with-secrets` and related wrappers.
@@ -15,7 +18,17 @@ export PAGERDUTY_API_KEY_OP_REF="op://Vault/Item/pagerduty_api_key"
 export PAGERDUTY_USER_API_KEY_OP_REF="op://Vault/Item/pagerduty_user_api_key"
 
 claude-alt1() {
-  ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1" claude "$@"
+  local _bin
+  _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
+
+  if [[ -n "${ANTHROPIC_BASE_URL_ALT1:-}" ]]; then
+    ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1" \
+      ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_ALT1" \
+      env -u ANTHROPIC_AUTH_TOKEN "$_bin" "$@"
+  else
+    ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1" \
+      env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_BASE_URL "$_bin" "$@"
+  fi
 }
 
 # Optional local PATH, aliases, or helper functions.

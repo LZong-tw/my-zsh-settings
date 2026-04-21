@@ -18,7 +18,7 @@ This repo keeps Claude-related shell behavior in `zsh/.zshrc`, but leaves creden
 1. Copy `zsh/.zshrc.local.example` to `~/.zshrc.local` and fill in your real values.
 2. Copy `examples/claude-api-key-helper.sh.example` to `~/.claude/api-key-helper.sh` and `chmod 755` it.
 3. Add an `apiKeyHelper` entry to your Claude Code local settings.
-4. For multiple Anthropic keys, keep each key in 1Password and add wrapper functions such as `claude-alt1` in `~/.zshrc.local`.
+4. For multiple Anthropic keys, keep each key in 1Password and add wrapper functions such as `claude-alt1` in `~/.zshrc.local`; when keys come from different platforms, switch or unset `ANTHROPIC_BASE_URL` with the key.
 
 Example `~/.claude/settings.local.json`:
 
