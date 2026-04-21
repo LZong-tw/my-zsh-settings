@@ -220,6 +220,7 @@ fi
 export ZSH_COMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
 _completion_refresh_stamp="${ZSH_COMPDUMP}.refresh"
 _completion_refresh_interval=86400
+_completion_refresh_lock="${ZSH_COMPDUMP}.refresh.lock"
 # Add plugin completion directories to fpath
 fpath=(
   $HOME/.oh-my-zsh/plugins/extract
@@ -249,16 +250,27 @@ _completion_refresh_needed() {
   (( _now - _stamp_epoch >= _completion_refresh_interval ))
 }
 
-_refresh_completions_if_needed() {
+_refresh_completions_in_background() {
+  add-zsh-hook -d precmd _refresh_completions_in_background
   _completion_refresh_needed || return 0
-  compinit -i -d "$ZSH_COMPDUMP"
-  _mark_completion_refresh
+
+  local _tmp_dump="${ZSH_COMPDUMP}.${$}.${RANDOM}.tmp"
+  (
+    if command mkdir "$_completion_refresh_lock" 2>/dev/null; then
+      trap 'rmdir "$_completion_refresh_lock"; rm -f "$_tmp_dump" "$_tmp_dump.zwc"' EXIT INT TERM HUP
+      autoload -Uz compinit
+      if compinit -i -d "$_tmp_dump"; then
+        command mv -f "$_tmp_dump" "$ZSH_COMPDUMP"
+        _mark_completion_refresh
+      fi
+    fi
+  ) >/dev/null 2>&1 &!
 }
 
 autoload -Uz compinit
 if [[ -s "$ZSH_COMPDUMP" ]]; then
   compinit -C -d "$ZSH_COMPDUMP"
-  _refresh_completions_if_needed
+  _completion_refresh_needed && add-zsh-hook precmd _refresh_completions_in_background
 else
   compinit -i -d "$ZSH_COMPDUMP"
   _mark_completion_refresh
@@ -266,6 +278,7 @@ fi
 
 rebuild-completions() {
   rm -f "$ZSH_COMPDUMP" "$ZSH_COMPDUMP.zwc" "$_completion_refresh_stamp"
+  rmdir "$_completion_refresh_lock" 2>/dev/null
   autoload -Uz compinit
   compinit -i -d "$ZSH_COMPDUMP"
   _mark_completion_refresh
