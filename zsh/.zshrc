@@ -220,6 +220,7 @@ fi
 export ZSH_COMPDUMP="${ZDOTDIR:-$HOME}/.zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
 _completion_refresh_stamp="${ZSH_COMPDUMP}.refresh"
 _completion_refresh_interval=86400
+_completion_refresh_delay=120
 _completion_refresh_lock="${ZSH_COMPDUMP}.refresh.lock"
 # Add plugin completion directories to fpath
 fpath=(
@@ -256,6 +257,7 @@ _refresh_completions_in_background() {
 
   local _tmp_dump="${ZSH_COMPDUMP}.${$}.${RANDOM}.tmp"
   (
+    sleep "$_completion_refresh_delay" || exit
     if command mkdir "$_completion_refresh_lock" 2>/dev/null; then
       trap 'rmdir "$_completion_refresh_lock"; rm -f "$_tmp_dump" "$_tmp_dump.zwc"' EXIT INT TERM HUP
       autoload -Uz compinit
@@ -547,4 +549,10 @@ if [[ -d "$_gcloud_sdk_root/bin" ]]; then
 fi
 unset _gcloud_sdk_root
 _zsh_startup_mark finish
-_zsh_startup_dump_if_slow
+
+_zsh_startup_dump_after_first_prompt() {
+  add-zsh-hook -d precmd _zsh_startup_dump_after_first_prompt
+  _zsh_startup_mark first-prompt
+  _zsh_startup_dump_if_slow
+}
+add-zsh-hook precmd _zsh_startup_dump_after_first_prompt
