@@ -1,6 +1,9 @@
 [[ -n "${ZSH_STARTUP_PROFILING:-}" ]] || return 0
 
 zmodload zsh/datetime 2>/dev/null || return 0
+if [[ "${ZSH_STARTUP_PROFILE_ZPROF:-1}" != 0 ]]; then
+    zmodload zsh/zprof 2>/dev/null
+fi
 
 typeset -g _zsh_startup_profile_t0="${_zsh_startup_profile_t0:-${EPOCHREALTIME:-0}}"
 typeset -ga _zsh_startup_profile_marks
@@ -41,6 +44,11 @@ zsh_startup_profile_dump_if_slow() {
             printf '  %7.3fs  %s\n' "$_delta" "$_name"
             _prev=$_cur
         done
-        printf '  %7.3fs  finish\n\n' "$((_end - _prev))"
+        printf '  %7.3fs  finish\n' "$((_end - _prev))"
+        if [[ "${ZSH_STARTUP_PROFILE_ZPROF:-1}" != 0 ]] && (( $+builtins[zprof] )); then
+            printf '\n-- zprof --\n'
+            zprof
+        fi
+        printf '\n'
     } >>| "$_log_path"
 }

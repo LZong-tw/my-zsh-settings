@@ -379,12 +379,85 @@ alias reload="exec zsh"
 tmuxcc() { ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX=1 command tmux -CC "$@"; }
 
 # AWS & Kubectl (Lazy Load: first Tab OR first run triggers completion load)
-kubectl() {
-  unfunction kubectl
+p10k_kubecontext_lazy_prompt() {
+  local _cache="${P10K_KUBECONTEXT_CACHE_FILE:-${XDG_CACHE_HOME:-$HOME/.cache}/p10k-kubecontext}"
+  local _ctx
+  [[ -r "$_cache" ]] || return 0
+  IFS= read -r _ctx < "$_cache" || return 0
+  [[ -n "$_ctx" ]] || return 0
+  print -r -- "$_ctx"
+}
+
+p10k_kubecontext_lazy_refresh() {
+  emulate -L zsh
+  (( $+commands[kubectl] )) || return 127
+
+  local _cache="${P10K_KUBECONTEXT_CACHE_FILE:-${XDG_CACHE_HOME:-$HOME/.cache}/p10k-kubecontext}"
+  local _dir="${_cache:h}"
+  local _ctx
+  [[ -d "$_dir" ]] || command mkdir -p "$_dir" 2>/dev/null || return 1
+  _ctx="$(command kubectl config current-context 2>/dev/null)" || {
+    command rm -f "$_cache" 2>/dev/null
+    return 1
+  }
+  [[ -n "$_ctx" ]] || {
+    command rm -f "$_cache" 2>/dev/null
+    return 1
+  }
+  print -r -- "$_ctx" >| "$_cache"
+}
+
+p10k_kubecontext_lazy_refresh_async() {
+  emulate -L zsh
+  [[ -z "${P10K_KUBECONTEXT_LAZY_DISABLE:-}" ]] || return 0
+  (( $+commands[kubectl] )) || return 0
+
+  local _cache="${P10K_KUBECONTEXT_CACHE_FILE:-${XDG_CACHE_HOME:-$HOME/.cache}/p10k-kubecontext}"
+  local _lock="${_cache}.lock"
+  if command mkdir "$_lock" 2>/dev/null; then
+    (
+      trap 'command rmdir "$_lock" 2>/dev/null' EXIT INT TERM HUP
+      p10k_kubecontext_lazy_refresh >/dev/null 2>&1
+    ) &!
+  fi
+}
+
+_refresh_kubecontext_after_command() {
+  local _status=${1:-0}
+  (( $+functions[p10k_kubecontext_lazy_refresh_async] )) && p10k_kubecontext_lazy_refresh_async
+  return "$_status"
+}
+
+_kubectl_completion_loaded=0
+_load_kubectl_completion() {
+  (( _kubectl_completion_loaded )) && return 0
+  (( $+commands[kubectl] )) || return 127
   source <(command kubectl completion zsh)
-  kubectl "$@"
+  _kubectl_completion_loaded=1
+}
+
+kubectl() {
+  _load_kubectl_completion
+  command kubectl "$@"
+  local _status=$?
+  _refresh_kubecontext_after_command "$_status"
 }
 compdef '_dispatch kubectl kubectl' kubectl
+
+if (( $+commands[kubectx] )); then
+  kubectx() {
+    command kubectx "$@"
+    local _status=$?
+    _refresh_kubecontext_after_command "$_status"
+  }
+fi
+if (( $+commands[kubens] )); then
+  kubens() {
+    command kubens "$@"
+    local _status=$?
+    _refresh_kubecontext_after_command "$_status"
+  }
+fi
 
 aws() {
   unfunction aws
@@ -490,9 +563,15 @@ _zsh_startup_mark local-overrides
 # ===========================================
 # 13. BACKGROUND TASKS
 # ===========================================
-if [[ -z "$ITERMS_SHELL_INTEGRATION_SKIPPED" ]]; then
-    [[ -e "${HOME}/.iterm2_shell_integration.zsh" ]] && source "${HOME}/.iterm2_shell_integration.zsh"
+_should_load_iterm2_shell_integration() {
+  [[ -z "${ITERMS_SHELL_INTEGRATION_SKIPPED:-}" ]] || return 1
+  [[ -r "${HOME}/.iterm2_shell_integration.zsh" ]] || return 1
+  [[ "${TERM_PROGRAM:-}" == "iTerm.app" || -n "${ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX:-}" ]]
+}
+if _should_load_iterm2_shell_integration; then
+  source "${HOME}/.iterm2_shell_integration.zsh"
 fi
+unset -f _should_load_iterm2_shell_integration
 
 zcompile_if_needed() {
   local file=$1

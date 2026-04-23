@@ -56,9 +56,13 @@ Add these to `~/.zshrc.local` only when you want profiling:
 export ZSH_STARTUP_PROFILING=1
 export ZSH_STARTUP_PROFILE_THRESHOLD=1.0
 # export ZSH_STARTUP_PROFILE_LOG_PATH="$HOME/.cache/zsh-slow-start.log"
+# export ZSH_STARTUP_PROFILE_ZPROF=1
 ```
 
-When enabled, both `~/.zprofile` and `~/.zshrc` can write phase timings through the portable module at `~/.zsh.startup-profiler.zsh`.
+When enabled, both `~/.zprofile` and `~/.zshrc` can write phase timings through the portable module at `~/.zsh.startup-profiler.zsh`. Slow entries also include `zprof` function timings by default; set `ZSH_STARTUP_PROFILE_ZPROF=0` to keep only phase timings.
+
+## Kubernetes prompt context
+Powerlevel10k uses a custom lazy kube context segment instead of the built-in `kubecontext` segment. The prompt only reads a cache at `$XDG_CACHE_HOME/p10k-kubecontext` or `~/.cache/p10k-kubecontext`; `kubectl`, `kubectx`, and `kubens` refresh that cache in the background after they run.
 
 ## Optional plugin install
 ```bash

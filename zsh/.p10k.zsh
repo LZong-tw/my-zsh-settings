@@ -76,7 +76,7 @@
     phpenv                  # php version from phpenv (https://github.com/phpenv/phpenv)
     scalaenv                # scala version from scalaenv (https://github.com/scalaenv/scalaenv)
     haskell_stack           # haskell version from stack (https://haskellstack.org/)
-    kubecontext             # current kubernetes context (https://kubernetes.io/)
+    custom_kubecontext_lazy # cached kubernetes context, refreshed after kubectl use
     terraform               # terraform workspace (https://www.terraform.io)
     # terraform_version     # terraform version (https://www.terraform.io)
     aws                     # aws profile (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
@@ -1379,6 +1379,14 @@
   typeset -g POWERLEVEL9K_TERRAFORM_VERSION_SHOW_ON_COMMAND='terraform|tf'
 
   #############[ kubecontext: current kubernetes context (https://kubernetes.io/) ]#############
+  # Built-in kubecontext calls `kubectl config view` while rendering the prompt. Keep this custom
+  # segment cheap by reading a cache that gets refreshed after kubectl/kubectx/kubens commands.
+  typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY='p10k_kubecontext_lazy_prompt'
+  typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_SHOW_ON_COMMAND='kubectl|helm|kubens|kubectx|oc|istioctl|kogito|k9s|helmfile|flux|fluxctl|stern|kubeseal|skaffold|kubent|kubecolor|cmctl|sparkctl'
+  typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_FOREGROUND=7
+  typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_BACKGROUND=5
+  typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_PREFIX='at '
+
   # Show kubecontext only when the command you are typing invokes one of these tools.
   # Tip: Remove the next line to always show kubecontext.
   typeset -g POWERLEVEL9K_KUBECONTEXT_SHOW_ON_COMMAND='kubectl|helm|kubens|kubectx|oc|istioctl|kogito|k9s|helmfile|flux|fluxctl|stern|kubeseal|skaffold|kubent|kubecolor|cmctl|sparkctl'

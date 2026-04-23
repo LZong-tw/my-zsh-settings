@@ -39,3 +39,8 @@ claude-alt1() {
 # export ZSH_STARTUP_PROFILING=1
 # export ZSH_STARTUP_PROFILE_THRESHOLD=1.0
 # export ZSH_STARTUP_PROFILE_LOG_PATH="$HOME/.cache/zsh-slow-start.log"
+# export ZSH_STARTUP_PROFILE_ZPROF=1
+
+# Optional kube context prompt cache.
+# export P10K_KUBECONTEXT_CACHE_FILE="$HOME/.cache/p10k-kubecontext"
+# export P10K_KUBECONTEXT_LAZY_DISABLE=1
