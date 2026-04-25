@@ -80,7 +80,7 @@
     terraform               # terraform workspace (https://www.terraform.io)
     # terraform_version     # terraform version (https://www.terraform.io)
     aws                     # aws profile (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
-    aws_eb_env              # aws elastic beanstalk environment (https://aws.amazon.com/elasticbeanstalk/)
+    # aws_eb_env            # disabled: `eb list` can trigger AWS MFA on prompt redraw
     azure                   # azure account name (https://docs.microsoft.com/en-us/cli/azure)
     # gcloud                # google cloud cli account and project (https://cloud.google.com/)
     google_app_cred         # google application credentials (https://cloud.google.com/docs/authentication/production)
