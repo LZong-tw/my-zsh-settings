@@ -27,7 +27,7 @@ Example `~/.claude/settings.local.json`:
 {
   "apiKeyHelper": "/Users/<you>/.claude/api-key-helper.sh",
   "env": {
-    "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "60000"
+    "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "14400000"
   }
 }
 ```
