@@ -36,6 +36,9 @@ fi
 unset _nvm_ver _nvm_node_bin
 # Strip relative paths and empty entries from inherited PATH
 path=("${(@)path:#(|./*|[^/]*)}")
+if [[ -d "/opt/homebrew/opt/go@1.25/bin" ]]; then
+  path=("/opt/homebrew/opt/go@1.25/bin" "${(@)path:#/opt/homebrew/opt/go@1.25/bin}")
+fi
 export PATH="$HOME/.composer/vendor/bin:$HOME/.local/bin:$HOME/.antigravity/antigravity/bin:$HOME/.bun/bin:$HOME/go/bin:$PATH"
 
 # API secrets: resolve on demand via 1Password secret references.
@@ -436,13 +439,21 @@ _load_kubectl_completion() {
   _kubectl_completion_loaded=1
 }
 
+_kubectl_lazy_complete() {
+  (( _kubectl_completion_loaded )) || _load_kubectl_completion || return 1
+
+  local _comp="${_comps[kubectl]-}"
+  [[ -n "$_comp" && "$_comp" != "_kubectl_lazy_complete" ]] || return 1
+  eval "$_comp"
+}
+
 kubectl() {
   _load_kubectl_completion
   command kubectl "$@"
   local _status=$?
   _refresh_kubecontext_after_command "$_status"
 }
-compdef '_dispatch kubectl kubectl' kubectl
+compdef _kubectl_lazy_complete kubectl
 
 if (( $+commands[kubectx] )); then
   kubectx() {
@@ -460,12 +471,30 @@ if (( $+commands[kubens] )); then
 fi
 
 aws() {
-  unfunction aws
-  autoload -U +X bashcompinit && bashcompinit
-  complete -C '/usr/local/bin/aws_completer' aws
+  _load_aws_completion >/dev/null 2>&1 || true
   command aws "$@"
 }
-compdef '_dispatch aws aws' aws
+
+_aws_completion_loaded=0
+_load_aws_completion() {
+  (( _aws_completion_loaded )) && return 0
+
+  local _aws_completer
+  _aws_completer=$(whence -p aws_completer) || return 127
+
+  autoload -U +X bashcompinit && bashcompinit
+  complete -C "$_aws_completer" aws
+  _aws_completion_loaded=1
+}
+
+_aws_lazy_complete() {
+  _load_aws_completion || return 1
+
+  local _comp="${_comps[aws]-}"
+  [[ -n "$_comp" && "$_comp" != "_aws_lazy_complete" ]] || return 1
+  eval "$_comp"
+}
+compdef _aws_lazy_complete aws
 
 # ===========================================
 # 9. POWERFUL FUNCTIONS
@@ -485,6 +514,217 @@ laraclear() {
 ec2ls() { aws ec2 describe-instances --query "Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,PrivateIpAddress,Tags[?Key=='Name'].Value|[0]]" --output table; }
 testconn() { [ -z "$1" ] && { echo "Usage: testconn <host> [port]"; return 1; }; local port=${2:-80}; nc -zv "$1" "$port" 2>&1; }
 grepall() { grep -rn --color=auto --exclude-dir={.git,node_modules,vendor,.idea,storage,cache,bootstrap/cache} "$@" . ; }
+
+_aws_effective_profile() {
+    emulate -L zsh
+    if [[ -n "${AWS_PROFILE:-}" ]]; then
+        print -r -- "$AWS_PROFILE"
+    elif [[ -n "${AWS_DEFAULT_PROFILE:-}" ]]; then
+        print -r -- "$AWS_DEFAULT_PROFILE"
+    else
+        print -r -- "default"
+    fi
+}
+
+_aws_env_creds_state() {
+    emulate -L zsh
+    if [[ -n "${AWS_ACCESS_KEY_ID:-}" || -n "${AWS_SECRET_ACCESS_KEY:-}" || -n "${AWS_SESSION_TOKEN:-}" ]]; then
+        print -r -- "present"
+    else
+        print -r -- "absent"
+    fi
+}
+
+_aws_config_get() {
+    emulate -L zsh
+    local _profile=$1
+    local _key=$2
+    local _value
+
+    _value=$(command aws configure get "profile.${_profile}.${_key}" 2>/dev/null)
+    print -r -- "${_value:-<unset>}"
+}
+
+awswho() {
+    emulate -L zsh
+    local _want_sts=0
+
+    case "${1:-}" in
+        --sts)
+            _want_sts=1
+            shift
+            ;;
+        "" ) ;;
+        * )
+            echo "Usage: awswho [--sts]" >&2
+            return 1
+            ;;
+    esac
+
+    [[ $# -eq 0 ]] || { echo "Usage: awswho [--sts]" >&2; return 1; }
+    (( $+commands[aws] )) || { echo "aws not found" >&2; return 127; }
+
+    local _profile _env_creds _source _region _role_arn _source_profile _credential_process
+    _profile=$(_aws_effective_profile)
+    _env_creds=$(_aws_env_creds_state)
+    _source="profile:${_profile}"
+    [[ "$_env_creds" == "present" ]] && _source="env-credentials"
+
+    _region="${AWS_REGION:-${AWS_DEFAULT_REGION:-$(_aws_config_get "$_profile" region)}}"
+    _role_arn=$(_aws_config_get "$_profile" role_arn)
+    _source_profile=$(_aws_config_get "$_profile" source_profile)
+    _credential_process=$(_aws_config_get "$_profile" credential_process)
+
+    print -r -- "source: ${_source}"
+    print -r -- "AWS_PROFILE: ${AWS_PROFILE:-<unset>}"
+    print -r -- "AWS_DEFAULT_PROFILE: ${AWS_DEFAULT_PROFILE:-<unset>}"
+    print -r -- "env_session: ${_env_creds}"
+    print -r -- "region: ${_region:-<unset>}"
+    print -r -- "role_arn: ${_role_arn}"
+    print -r -- "source_profile: ${_source_profile}"
+    print -r -- "credential_process: ${_credential_process}"
+    print -r -- "session_expiration: ${AWS_SESSION_EXPIRATION:-${AWS_CREDENTIAL_EXPIRATION:-<unset>}}"
+    print -r -- "granted_command: ${GRANTED_COMMAND:-<unset>}"
+
+    if (( _want_sts )); then
+        local _sts_json _account _arn _user_id
+        _sts_json=$(command aws sts get-caller-identity --no-cli-pager --output json 2>&1) || {
+            print -r -- "sts: error"
+            print -r -- "$_sts_json"
+            return 1
+        }
+
+        if (( $+commands[jq] )); then
+            _account=$(jq -r '.Account' <<< "$_sts_json")
+            _arn=$(jq -r '.Arn' <<< "$_sts_json")
+            _user_id=$(jq -r '.UserId' <<< "$_sts_json")
+            print -r -- "sts_account: ${_account}"
+            print -r -- "sts_arn: ${_arn}"
+            print -r -- "sts_user_id: ${_user_id}"
+        else
+            print -r -- "sts: ${_sts_json}"
+        fi
+    fi
+}
+
+kubewho() {
+    emulate -L zsh
+    local _want_sts=0
+    local _context=""
+
+    while (( $# )); do
+        case "$1" in
+            --sts)
+                _want_sts=1
+                ;;
+            -h|--help)
+                echo "Usage: kubewho [--sts] [context]" >&2
+                return 0
+                ;;
+            *)
+                [[ -z "$_context" ]] || { echo "Usage: kubewho [--sts] [context]" >&2; return 1; }
+                _context="$1"
+                ;;
+        esac
+        shift
+    done
+
+    (( $+commands[kubectl] )) || { echo "kubectl not found" >&2; return 127; }
+    (( $+commands[jq] )) || { echo "kubewho requires jq" >&2; return 127; }
+
+    [[ -n "$_context" ]] || _context=$(command kubectl config current-context 2>/dev/null)
+    [[ -n "$_context" ]] || { echo "No current kube context" >&2; return 1; }
+
+    local _config_json _cluster _user _server _exec_command _exec_profile _exec_default_profile _unset_vars
+    local _shell_profile _shell_env_creds _identity_source _isolated_env
+    _config_json=$(command kubectl config view --raw -o json 2>/dev/null) || {
+        echo "Failed to read kubeconfig" >&2
+        return 1
+    }
+
+    _cluster=$(jq -r --arg ctx "$_context" '.contexts[] | select(.name == $ctx) | .context.cluster' <<< "$_config_json")
+    _user=$(jq -r --arg ctx "$_context" '.contexts[] | select(.name == $ctx) | .context.user' <<< "$_config_json")
+    [[ -n "$_cluster" && -n "$_user" ]] || { echo "Context not found: $_context" >&2; return 1; }
+
+    _server=$(jq -r --arg cluster "$_cluster" '.clusters[] | select(.name == $cluster) | .cluster.server // "<unset>"' <<< "$_config_json")
+    _exec_command=$(jq -r --arg user "$_user" '.users[] | select(.name == $user) | .user.exec.command // "<none>"' <<< "$_config_json")
+    _exec_profile=$(jq -r --arg user "$_user" '.users[] | select(.name == $user) | ((.user.exec.args // []) | map(select(startswith("AWS_PROFILE="))) | .[0] // "" | sub("^AWS_PROFILE="; ""))' <<< "$_config_json")
+    _exec_default_profile=$(jq -r --arg user "$_user" '.users[] | select(.name == $user) | ((.user.exec.args // []) | map(select(startswith("AWS_DEFAULT_PROFILE="))) | .[0] // "" | sub("^AWS_DEFAULT_PROFILE="; ""))' <<< "$_config_json")
+    _unset_vars=$(jq -r --arg user "$_user" '
+        .users[] | select(.name == $user) |
+        (.user.exec.args // []) as $args |
+        if ($args | length) > 1 then
+            [
+                range(0; ($args | length) - 1)
+                | select($args[.] == "-u")
+                | $args[.+1]
+            ] | join(",")
+        else
+            ""
+        end
+    ' <<< "$_config_json")
+
+    _shell_profile=$(_aws_effective_profile)
+    _shell_env_creds=$(_aws_env_creds_state)
+    _isolated_env="no"
+    [[ "$_unset_vars" == *AWS_ACCESS_KEY_ID* && "$_unset_vars" == *AWS_SECRET_ACCESS_KEY* && "$_unset_vars" == *AWS_SESSION_TOKEN* ]] && _isolated_env="yes"
+
+    if [[ -n "$_exec_profile" ]]; then
+        _identity_source="kubeconfig profile:${_exec_profile}"
+    elif [[ "$_shell_env_creds" == "present" ]]; then
+        _identity_source="ambient shell env credentials"
+    else
+        _identity_source="ambient shell profile:${_shell_profile}"
+    fi
+
+    print -r -- "context: ${_context}"
+    print -r -- "cluster: ${_cluster}"
+    print -r -- "server: ${_server}"
+    print -r -- "user: ${_user}"
+    print -r -- "exec_command: ${_exec_command}"
+    print -r -- "exec_profile: ${_exec_profile:-<unset>}"
+    print -r -- "exec_default_profile: ${_exec_default_profile:-<unset>}"
+    print -r -- "exec_unset_env: ${_unset_vars:-<none>}"
+    print -r -- "exec_env_isolated: ${_isolated_env}"
+    print -r -- "shell_profile: ${_shell_profile}"
+    print -r -- "shell_env_session: ${_shell_env_creds}"
+    print -r -- "identity_source: ${_identity_source}"
+
+    if (( _want_sts )); then
+        local -a _cmd
+        local _var
+        local _sts_json _account _arn _user_id
+
+        case "$_exec_command" in
+            env|aws) ;;
+            *)
+                echo "kubewho --sts only supports aws/env exec commands" >&2
+                return 1
+                ;;
+        esac
+
+        _cmd=(env)
+        for _var in "${(@s:,:)_unset_vars}"; do
+            [[ -n "$_var" ]] && _cmd+=(-u "$_var")
+        done
+        [[ -n "$_exec_profile" ]] && _cmd+=("AWS_PROFILE=${_exec_profile}")
+        [[ -n "$_exec_default_profile" ]] && _cmd+=("AWS_DEFAULT_PROFILE=${_exec_default_profile}")
+        _cmd+=(aws sts get-caller-identity --no-cli-pager --output json)
+
+        _sts_json=$("${_cmd[@]}" 2>&1) || {
+            print -r -- "sts: error"
+            print -r -- "$_sts_json"
+            return 1
+        }
+
+        _account=$(jq -r '.Account' <<< "$_sts_json")
+        _arn=$(jq -r '.Arn' <<< "$_sts_json")
+        _user_id=$(jq -r '.UserId' <<< "$_sts_json")
+        print -r -- "sts_account: ${_account}"
+        print -r -- "sts_arn: ${_arn}"
+        print -r -- "sts_user_id: ${_user_id}"
+    fi
+}
 
 # take: mkdir+cd / git clone+cd / download+extract+cd
 mkcd() { [[ $# -eq 0 ]] && { echo "Usage: mkcd <dir>"; return 1; }; mkdir -p "$@" && cd "${@:$#}" }
@@ -611,10 +851,7 @@ fi
 # Google Cloud SDK: keep binaries on PATH, but lazy-load shell completion on first use.
 _gcloud_sdk_root="${GCLOUD_SDK_ROOT:-$HOME/google-cloud-sdk}"
 if [[ -d "$_gcloud_sdk_root/bin" ]]; then
-  case ":$PATH:" in
-    *":$_gcloud_sdk_root/bin:"*) ;;
-    *) export PATH="$_gcloud_sdk_root/bin:$PATH" ;;
-  esac
+  path=("${(@)path:#$_gcloud_sdk_root/bin}" "$_gcloud_sdk_root/bin")
 
   _load_gcloud_sdk_completion() {
     unset -f gcloud bq gsutil 2>/dev/null
@@ -635,3 +872,4 @@ _zsh_startup_dump_after_first_prompt() {
   _zsh_startup_dump_if_slow
 }
 add-zsh-hook precmd _zsh_startup_dump_after_first_prompt
+export KKBOX_SKILLS_DIR=~/projects/kkbox-skills
