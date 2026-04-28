@@ -61,6 +61,8 @@ claude-azure() {
   [[ -z "$_has_model" ]] && _model_args=(--model "$ANTHROPIC_MODEL_AZURE")
   [[ -z "$_has_permission_mode" ]] && _permission_args=(--permission-mode auto)
 
+  # Azure currently rejects experimental beta request bodies such as
+  # context_management; remove the disable flag once Azure supports those Claude betas.
   CLAUDE_CODE_SIMULATE_PROXY_USAGE=1 \
     CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1 \
     ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE" \
