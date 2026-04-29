@@ -6,7 +6,7 @@ export AWS_REGION="ap-northeast-1"
 export ANTHROPIC_BASE_URL_DEFAULT="https://llm-gateway.example.internal"
 export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
 # Claude Code appends /v1/messages; include any gateway prefix needed before /v1.
-# export ANTHROPIC_BASE_URL_ALT1="https://alt-gateway.example.internal/api"
+# export ANTHROPIC_BASE_URL_JBRIDGE="https://jbridge.example.internal/api"
 # claude-azure uses the Anthropic-compatible Azure base URL, not Foundry mode,
 # because Claude Code auto mode is provider-gated to firstParty/custom base URLs.
 # Claude Code appends /v1/messages; the target messages endpoint would be:
@@ -22,25 +22,29 @@ export GITLAB_API_URL="https://gitlab.example.internal"
 
 # 1Password secret references used by `with-secrets` and related wrappers.
 export ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT="op://Vault/Item/anthropic_auth_token"
-export ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1="op://Vault/Item/anthropic_auth_token_alt1"
+export ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE="op://Vault/Item/anthropic_auth_token_jbridge"
 # export ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE="op://Vault/Item/anthropic_auth_token_azure"
 export ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT"
 export GITLAB_PERSONAL_ACCESS_TOKEN_OP_REF="op://Vault/Item/gitlab_personal_access_token"
 export PAGERDUTY_API_KEY_OP_REF="op://Vault/Item/pagerduty_api_key"
 export PAGERDUTY_USER_API_KEY_OP_REF="op://Vault/Item/pagerduty_user_api_key"
 
-claude-alt1() {
+claude-jbridge() {
   local _bin
   _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
 
-  if [[ -n "${ANTHROPIC_BASE_URL_ALT1:-}" ]]; then
-    ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1" \
-      ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_ALT1" \
+  if [[ -n "${ANTHROPIC_BASE_URL_JBRIDGE:-}" ]]; then
+    ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE" \
+      ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_JBRIDGE" \
       env -u ANTHROPIC_AUTH_TOKEN "$_bin" "$@"
   else
-    ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1" \
+    ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE" \
       env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_BASE_URL "$_bin" "$@"
   fi
+}
+
+claude-jb() {
+  claude-jbridge "$@"
 }
 
 # Optional Azure wrapper for Anthropic-compatible Claude deployments.
