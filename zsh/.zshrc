@@ -42,10 +42,11 @@ fi
 export PATH="$HOME/.composer/vendor/bin:$HOME/.local/bin:$HOME/.antigravity/antigravity/bin:$HOME/.bun/bin:$HOME/go/bin:$PATH"
 
 # API secrets: resolve on demand via 1Password secret references.
+# Claude uses ~/.claude/settings.json apiKeyHelper, so with-secrets intentionally
+# excludes ANTHROPIC_AUTH_TOKEN to avoid leaking Claude provider state into tools.
 # Shell startup stays fast and plaintext secrets only exist in child processes launched through `with-secrets`.
-_secret_envs=(ANTHROPIC_AUTH_TOKEN GITLAB_PERSONAL_ACCESS_TOKEN PAGERDUTY_API_KEY PAGERDUTY_USER_API_KEY)
+_secret_envs=(GITLAB_PERSONAL_ACCESS_TOKEN PAGERDUTY_API_KEY PAGERDUTY_USER_API_KEY)
 _secret_ref_vars=(
-    ANTHROPIC_AUTH_TOKEN_OP_REF
     GITLAB_PERSONAL_ACCESS_TOKEN_OP_REF
     PAGERDUTY_API_KEY_OP_REF
     PAGERDUTY_USER_API_KEY_OP_REF
