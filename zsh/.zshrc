@@ -77,7 +77,14 @@ with-secrets() {
         fi
     done
 
-    env "${_env_args[@]}" command op run -- "$@"
+    env \
+        -u ANTHROPIC_AUTH_TOKEN \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1 \
+        "${_env_args[@]}" command op run -- "$@"
 }
 
 load-secrets() {
