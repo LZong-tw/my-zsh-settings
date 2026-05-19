@@ -7,6 +7,12 @@ export ANTHROPIC_BASE_URL_DEFAULT="https://llm-gateway.example.internal"
 export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
 # Claude Code appends /v1/messages; include any gateway prefix needed before /v1.
 # export ANTHROPIC_BASE_URL_JBRIDGE="https://jbridge.example.internal/api"
+# Pin provider-specific model ids when the gateway exposes separate 200K/1M
+# aliases. Keep the brackets quoted when passing these ids manually in zsh.
+# export ANTHROPIC_MODEL_JBRIDGE_OPUS="claude-opus-4-7[1m]"
+# export ANTHROPIC_MODEL_JBRIDGE_SONNET="claude-sonnet-4-6[1m]"
+# export ANTHROPIC_MODEL_JBRIDGE_HAIKU="$ANTHROPIC_MODEL_JBRIDGE_SONNET"
+# export ANTHROPIC_MODEL_JBRIDGE="$ANTHROPIC_MODEL_JBRIDGE_OPUS"
 # claude-azure uses the Anthropic-compatible Azure base URL, not Foundry mode,
 # because Claude Code auto mode is provider-gated to firstParty/custom base URLs.
 # Claude Code appends /v1/messages; the target messages endpoint would be:
@@ -30,16 +36,30 @@ export PAGERDUTY_API_KEY_OP_REF="op://Vault/Item/pagerduty_api_key"
 export PAGERDUTY_USER_API_KEY_OP_REF="op://Vault/Item/pagerduty_user_api_key"
 
 claude-jbridge() {
-  local _bin
+  local _bin _arg _has_model
+  local -a _model_args
   _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
+
+  for _arg in "$@"; do
+    case "$_arg" in
+      --model|-m|--model=*) _has_model=1 ;;
+    esac
+  done
+  [[ -z "$_has_model" && -n "${ANTHROPIC_MODEL_JBRIDGE:-}" ]] && _model_args=(--model "$ANTHROPIC_MODEL_JBRIDGE")
 
   if [[ -n "${ANTHROPIC_BASE_URL_JBRIDGE:-}" ]]; then
     ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE" \
       ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_JBRIDGE" \
-      env -u ANTHROPIC_AUTH_TOKEN "$_bin" "$@"
+      ANTHROPIC_DEFAULT_OPUS_MODEL="${ANTHROPIC_MODEL_JBRIDGE_OPUS:-}" \
+      ANTHROPIC_DEFAULT_SONNET_MODEL="${ANTHROPIC_MODEL_JBRIDGE_SONNET:-}" \
+      ANTHROPIC_DEFAULT_HAIKU_MODEL="${ANTHROPIC_MODEL_JBRIDGE_HAIKU:-}" \
+      env -u CLAUDE_CODE_USE_FOUNDRY -u ANTHROPIC_FOUNDRY_BASE_URL -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_MODEL "$_bin" "${_model_args[@]}" "$@"
   else
     ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE" \
-      env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_BASE_URL "$_bin" "$@"
+      ANTHROPIC_DEFAULT_OPUS_MODEL="${ANTHROPIC_MODEL_JBRIDGE_OPUS:-}" \
+      ANTHROPIC_DEFAULT_SONNET_MODEL="${ANTHROPIC_MODEL_JBRIDGE_SONNET:-}" \
+      ANTHROPIC_DEFAULT_HAIKU_MODEL="${ANTHROPIC_MODEL_JBRIDGE_HAIKU:-}" \
+      env -u CLAUDE_CODE_USE_FOUNDRY -u ANTHROPIC_FOUNDRY_BASE_URL -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_MODEL -u ANTHROPIC_BASE_URL "$_bin" "${_model_args[@]}" "$@"
   fi
 }
 
