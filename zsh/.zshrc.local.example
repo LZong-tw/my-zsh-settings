@@ -16,6 +16,8 @@ export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
 export GITLAB_API_URL="https://gitlab.example.internal"
 # Optional separate Codex home for a personal subscription account.
 # export CODEX_SUB_HOME="$HOME/.codex-sub"
+# Optional 1Password ref for `claude setup-token`; used only for `claude-sub -p`.
+# export CLAUDE_SUB_OAUTH_TOKEN_OP_REF="op://Vault/Item/claude_code_oauth_token_sub"
 
 # 1Password secret references used by `with-secrets` and related wrappers.
 export ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT="op://Vault/Item/anthropic_auth_token"
@@ -61,8 +63,34 @@ claude-jb() {
 }
 
 claude-sub() {
-  local _bin
+  local _bin _arg _is_print _oauth_token _op_bin
+  local -a _oauth_env
   _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
+
+  for _arg in "$@"; do
+    case "$_arg" in
+      -p|--print) _is_print=1 ;;
+    esac
+  done
+
+  if [[ -n "$_is_print" && -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+    if [[ -z "${CLAUDE_SUB_OAUTH_TOKEN_OP_REF:-}" ]]; then
+      echo "claude-sub -p requires CLAUDE_CODE_OAUTH_TOKEN or CLAUDE_SUB_OAUTH_TOKEN_OP_REF." >&2
+      echo "Run 'claude-sub setup-token' and store the token in 1Password." >&2
+      return 1
+    fi
+    _op_bin=${OP_BIN:-/opt/homebrew/bin/op}
+    [[ -x "$_op_bin" ]] || _op_bin=$(command -v op 2>/dev/null) || {
+      echo "op not found; cannot read CLAUDE_SUB_OAUTH_TOKEN_OP_REF" >&2
+      return 127
+    }
+    _oauth_token=$("$_op_bin" read "$CLAUDE_SUB_OAUTH_TOKEN_OP_REF" --no-newline) || {
+      echo "Unable to read CLAUDE_SUB_OAUTH_TOKEN_OP_REF from 1Password." >&2
+      echo "Run 'claude-sub setup-token' and store it at: $CLAUDE_SUB_OAUTH_TOKEN_OP_REF" >&2
+      return 1
+    }
+    _oauth_env=(CLAUDE_CODE_OAUTH_TOKEN="$_oauth_token")
+  fi
 
   # Use Claude subscription/OAuth auth by masking the user apiKeyHelper and
   # clearing provider-specific env only for this child process. Disable Claude's
@@ -98,6 +126,7 @@ claude-sub() {
     -u CLAUDE_CODE_USE_FOUNDRY \
     -u CLAUDE_CODE_SIMULATE_PROXY_USAGE \
     -u CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS \
+    "${_oauth_env[@]}" \
     "$_bin" --settings '{"apiKeyHelper":"","env":{"CLAUDE_CODE_SUBPROCESS_ENV_SCRUB":"0"}}' "$@"
 }
 

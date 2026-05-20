@@ -20,7 +20,7 @@ This repo keeps Claude-related shell behavior in `zsh/.zshrc`, but leaves creden
 3. Add an `apiKeyHelper` entry to your Claude Code local settings.
 4. For multiple Anthropic keys, keep each key in 1Password and add wrapper functions such as `claude-jbridge` with a short alias like `claude-jb` in `~/.zshrc.local`; when keys come from different platforms, switch or unset `ANTHROPIC_BASE_URL` with the key.
 5. Pin `ANTHROPIC_DEFAULT_OPUS_MODEL` and `ANTHROPIC_DEFAULT_SONNET_MODEL` inside provider wrappers to the model ids currently accepted by that gateway; explicit 1M aliases only work while the gateway exposes them.
-6. For personal subscriptions, use `claude-sub` and `codex-sub` wrappers. `claude-sub` masks the API-key helper, clears provider env, and disables Claude subprocess env scrub so Git/SSH tools can still see `SSH_AUTH_SOCK`; run `claude-sub auth login` yourself if the subscription path is not logged in. `codex-sub` sets `CODEX_HOME=${CODEX_SUB_HOME:-$HOME/.codex-sub}` so it has its own auth/config/session state and does not touch `~/.codex`.
+6. For personal subscriptions, use `claude-sub` and `codex-sub` wrappers. `claude-sub` masks the API-key helper, clears provider env, and disables Claude subprocess env scrub so Git/SSH tools can still see `SSH_AUTH_SOCK`; run `claude-sub auth login` yourself if the subscription path is not logged in. For `claude-sub -p`, generate a token with `claude-sub setup-token` and store it in 1Password at `CLAUDE_SUB_OAUTH_TOKEN_OP_REF`. `codex-sub` sets `CODEX_HOME=${CODEX_SUB_HOME:-$HOME/.codex-sub}` so it has its own auth/config/session state and does not touch `~/.codex`.
 
 Example `~/.claude/settings.local.json`:
 
