@@ -13,23 +13,11 @@ export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
 # export ANTHROPIC_MODEL_JBRIDGE_SONNET="claude-sonnet-4-6"
 # export ANTHROPIC_MODEL_JBRIDGE_HAIKU="$ANTHROPIC_MODEL_JBRIDGE_SONNET"
 # export ANTHROPIC_MODEL_JBRIDGE="$ANTHROPIC_MODEL_JBRIDGE_OPUS"
-# claude-azure uses the Anthropic-compatible Azure base URL, not Foundry mode,
-# because Claude Code auto mode is provider-gated to firstParty/custom base URLs.
-# Claude Code appends /v1/messages; the target messages endpoint would be:
-#   https://my-resource.services.ai.azure.com/anthropic/v1/messages
-# export ANTHROPIC_BASE_URL_AZURE="https://my-resource.services.ai.azure.com/anthropic"
-# Raw Foundry mode is useful as a fallback, but Claude Code auto mode rejects it.
-# export ANTHROPIC_FOUNDRY_BASE_URL_AZURE="https://my-resource.services.ai.azure.com/anthropic"
-# export ANTHROPIC_MODEL_AZURE_OPUS="claude-opus-4-7"
-# export ANTHROPIC_MODEL_AZURE_SONNET="claude-sonnet-4-6"
-# export ANTHROPIC_MODEL_AZURE_HAIKU="$ANTHROPIC_MODEL_AZURE_SONNET"
-# export ANTHROPIC_MODEL_AZURE="$ANTHROPIC_MODEL_AZURE_OPUS"
 export GITLAB_API_URL="https://gitlab.example.internal"
 
 # 1Password secret references used by `with-secrets` and related wrappers.
 export ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT="op://Vault/Item/anthropic_auth_token"
 export ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE="op://Vault/Item/anthropic_auth_token_jbridge"
-# export ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE="op://Vault/Item/anthropic_auth_token_azure"
 export ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT"
 export GITLAB_PERSONAL_ACCESS_TOKEN_OP_REF="op://Vault/Item/gitlab_personal_access_token"
 export PAGERDUTY_API_KEY_OP_REF="op://Vault/Item/pagerduty_api_key"
@@ -125,36 +113,6 @@ codex-sub() {
     -u ANTHROPIC_API_KEY \
     -u ANTHROPIC_BASE_URL \
     "$_bin" "$@"
-}
-
-# Optional Azure wrapper for Anthropic-compatible Claude deployments.
-# This keeps the Azure key in 1Password via apiKeyHelper and prevents the
-# default Anthropic base URL/model from leaking into the Azure session.
-claude-azure() {
-  local _bin _arg _has_model _has_permission_mode
-  local -a _model_args _permission_args
-  _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
-  [[ -n "${ANTHROPIC_BASE_URL_AZURE:-}" ]] || { echo "ANTHROPIC_BASE_URL_AZURE is not set" >&2; return 1; }
-
-  for _arg in "$@"; do
-    case "$_arg" in
-      --model|-m|--model=*) _has_model=1 ;;
-      --permission-mode|--permission-mode=*|--dangerously-skip-permissions) _has_permission_mode=1 ;;
-    esac
-  done
-  [[ -z "$_has_model" ]] && _model_args=(--model "$ANTHROPIC_MODEL_AZURE")
-  [[ -z "$_has_permission_mode" ]] && _permission_args=(--permission-mode auto)
-
-  # Azure currently rejects experimental beta request bodies such as
-  # context_management; remove the disable flag once Azure supports those Claude betas.
-  CLAUDE_CODE_SIMULATE_PROXY_USAGE=1 \
-    CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1 \
-    ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE" \
-    ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_AZURE" \
-    ANTHROPIC_DEFAULT_OPUS_MODEL="$ANTHROPIC_MODEL_AZURE_OPUS" \
-    ANTHROPIC_DEFAULT_SONNET_MODEL="$ANTHROPIC_MODEL_AZURE_SONNET" \
-    ANTHROPIC_DEFAULT_HAIKU_MODEL="$ANTHROPIC_MODEL_AZURE_HAIKU" \
-    env -u CLAUDE_CODE_USE_FOUNDRY -u ANTHROPIC_FOUNDRY_BASE_URL -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_MODEL "$_bin" "${_model_args[@]}" "${_permission_args[@]}" "$@"
 }
 
 # Optional local PATH, aliases, or helper functions.
