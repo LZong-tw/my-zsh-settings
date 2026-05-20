@@ -14,6 +14,8 @@ export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
 # export ANTHROPIC_MODEL_JBRIDGE_HAIKU="$ANTHROPIC_MODEL_JBRIDGE_SONNET"
 # export ANTHROPIC_MODEL_JBRIDGE="$ANTHROPIC_MODEL_JBRIDGE_OPUS"
 export GITLAB_API_URL="https://gitlab.example.internal"
+# Optional separate Codex home for a personal subscription account.
+# export CODEX_SUB_HOME="$HOME/.codex-sub"
 
 # 1Password secret references used by `with-secrets` and related wrappers.
 export ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT="op://Vault/Item/anthropic_auth_token"
@@ -22,6 +24,9 @@ export ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT"
 export GITLAB_PERSONAL_ACCESS_TOKEN_OP_REF="op://Vault/Item/gitlab_personal_access_token"
 export PAGERDUTY_API_KEY_OP_REF="op://Vault/Item/pagerduty_api_key"
 export PAGERDUTY_USER_API_KEY_OP_REF="op://Vault/Item/pagerduty_user_api_key"
+
+# Drop retired wrappers when this file is sourced in an existing shell.
+unfunction claude-azure 2>/dev/null || true
 
 claude-jbridge() {
   local _bin _arg _has_model
@@ -95,12 +100,15 @@ claude-sub() {
 }
 
 codex-sub() {
-  local _bin
+  local _bin _codex_home
   _bin=$(whence -p codex) || { echo "codex not found" >&2; return 127; }
+  _codex_home="${CODEX_SUB_HOME:-$HOME/.codex-sub}"
+  mkdir -p "$_codex_home" || return
 
-  # Keep ~/.codex/auth.json and config.toml untouched; just prevent inherited
-  # API-key/provider env from overriding the ChatGPT subscription login.
-  env -u OPENAI_API_KEY \
+  # Keep ~/.codex untouched; CODEX_HOME gives the subscription account its own
+  # auth.json, config.toml, sessions, and logs under ~/.codex-sub by default.
+  CODEX_HOME="$_codex_home" \
+    env -u OPENAI_API_KEY \
     -u OPENAI_BASE_URL \
     -u OPENAI_API_BASE \
     -u OPENAI_ORG_ID \
