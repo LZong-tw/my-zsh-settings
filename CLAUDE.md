@@ -33,6 +33,14 @@ Example `~/.claude/settings.local.json`:
 }
 ```
 
+## Subscription print mode
+`claude-sub` interactive sessions and `claude-sub -p` do not use the same auth path.
+
+- `claude-sub auth status` can show `authMethod: claude.ai` and `subscriptionType: max` because interactive Claude Code can read the Claude.ai OAuth/keychain login.
+- `claude-sub -p` is non-interactive and does not reliably read that OAuth/keychain path. Claude Code's scripted path expects `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN`.
+- For a personal subscription, prefer `CLAUDE_CODE_OAUTH_TOKEN`; generate it with `claude-sub setup-token` and store it in 1Password at `CLAUDE_SUB_OAUTH_TOKEN_OP_REF`.
+- The wrapper reads that token only when `-p` or `--print` is present, so normal interactive `claude-sub` sessions still use the regular Claude.ai login.
+
 ## tmux -CC workflow
 - Start iTerm2 control mode with `tmuxcc`
 - Run `claude` inside the tmux session
