@@ -65,8 +65,10 @@ claude-sub() {
   _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
 
   # Use Claude subscription/OAuth auth by masking the user apiKeyHelper and
-  # clearing provider-specific env only for this child process.
-  env -u ANTHROPIC_AUTH_TOKEN \
+  # clearing provider-specific env only for this child process. Disable Claude's
+  # subprocess env scrub here so Git/SSH tools can still see SSH_AUTH_SOCK.
+  CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
+    env -u ANTHROPIC_AUTH_TOKEN \
     -u ANTHROPIC_API_KEY \
     -u ANTHROPIC_BASE_URL \
     -u ANTHROPIC_BASE_URL_DEFAULT \
@@ -96,7 +98,7 @@ claude-sub() {
     -u CLAUDE_CODE_USE_FOUNDRY \
     -u CLAUDE_CODE_SIMULATE_PROXY_USAGE \
     -u CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS \
-    "$_bin" --settings '{"apiKeyHelper":""}' "$@"
+    "$_bin" --settings '{"apiKeyHelper":"","env":{"CLAUDE_CODE_SUBPROCESS_ENV_SCRUB":"0"}}' "$@"
 }
 
 codex-sub() {
