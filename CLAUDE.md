@@ -19,7 +19,7 @@ This repo keeps Claude-related shell behavior in `zsh/.zshrc`, but leaves creden
 2. Copy `examples/claude-api-key-helper.sh.example` to `~/.claude/api-key-helper.sh` and `chmod 755` it.
 3. Add an `apiKeyHelper` entry to your Claude Code local settings.
 4. For multiple Anthropic keys, keep each key in 1Password and add wrapper functions such as `claude-jbridge` with a short alias like `claude-jb` in `~/.zshrc.local`; when keys come from different platforms, switch or unset `ANTHROPIC_BASE_URL` with the key.
-5. When a gateway exposes both 200K and 1M aliases, pin `ANTHROPIC_DEFAULT_OPUS_MODEL` and `ANTHROPIC_DEFAULT_SONNET_MODEL` inside that wrapper instead of relying on the gateway's bare model default.
+5. Pin `ANTHROPIC_DEFAULT_OPUS_MODEL` and `ANTHROPIC_DEFAULT_SONNET_MODEL` inside provider wrappers to the model ids currently accepted by that gateway; explicit 1M aliases only work while the gateway exposes them.
 6. For Azure AI Foundry Claude deployments, use `CLAUDE_CODE_USE_FOUNDRY=1` and `ANTHROPIC_FOUNDRY_BASE_URL`; in Claude Code 2.1.119 the value should include the `/anthropic` prefix, for example `https://my-resource.services.ai.azure.com/anthropic`, because Claude Code appends `/v1/messages`.
 
 Example `~/.claude/settings.local.json`:

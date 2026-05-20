@@ -7,10 +7,10 @@ export ANTHROPIC_BASE_URL_DEFAULT="https://llm-gateway.example.internal"
 export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
 # Claude Code appends /v1/messages; include any gateway prefix needed before /v1.
 # export ANTHROPIC_BASE_URL_JBRIDGE="https://jbridge.example.internal/api"
-# Pin provider-specific model ids when the gateway exposes separate 200K/1M
-# aliases. Keep the brackets quoted when passing these ids manually in zsh.
-# export ANTHROPIC_MODEL_JBRIDGE_OPUS="claude-opus-4-7[1m]"
-# export ANTHROPIC_MODEL_JBRIDGE_SONNET="claude-sonnet-4-6[1m]"
+# Pin provider-specific model ids from the gateway's model catalog. If the
+# gateway removes explicit 1M aliases, use the accepted bare ids here.
+# export ANTHROPIC_MODEL_JBRIDGE_OPUS="claude-opus-4-7"
+# export ANTHROPIC_MODEL_JBRIDGE_SONNET="claude-sonnet-4-6"
 # export ANTHROPIC_MODEL_JBRIDGE_HAIKU="$ANTHROPIC_MODEL_JBRIDGE_SONNET"
 # export ANTHROPIC_MODEL_JBRIDGE="$ANTHROPIC_MODEL_JBRIDGE_OPUS"
 # claude-azure uses the Anthropic-compatible Azure base URL, not Foundry mode,
