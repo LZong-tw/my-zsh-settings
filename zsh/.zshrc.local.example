@@ -67,6 +67,66 @@ claude-jb() {
   claude-jbridge "$@"
 }
 
+claude-sub() {
+  local _bin
+  _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
+
+  # Use Claude subscription/OAuth auth by masking the user apiKeyHelper and
+  # clearing provider-specific env only for this child process.
+  env -u ANTHROPIC_AUTH_TOKEN \
+    -u ANTHROPIC_API_KEY \
+    -u ANTHROPIC_BASE_URL \
+    -u ANTHROPIC_BASE_URL_DEFAULT \
+    -u ANTHROPIC_BASE_URL_JBRIDGE \
+    -u ANTHROPIC_BASE_URL_AZURE \
+    -u ANTHROPIC_AUTH_TOKEN_OP_REF \
+    -u ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT \
+    -u ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE \
+    -u ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE \
+    -u ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1 \
+    -u ANTHROPIC_MODEL \
+    -u ANTHROPIC_MODEL_JBRIDGE \
+    -u ANTHROPIC_MODEL_JBRIDGE_OPUS \
+    -u ANTHROPIC_MODEL_JBRIDGE_SONNET \
+    -u ANTHROPIC_MODEL_JBRIDGE_HAIKU \
+    -u ANTHROPIC_MODEL_AZURE \
+    -u ANTHROPIC_MODEL_AZURE_OPUS \
+    -u ANTHROPIC_MODEL_AZURE_SONNET \
+    -u ANTHROPIC_MODEL_AZURE_HAIKU \
+    -u ANTHROPIC_DEFAULT_OPUS_MODEL \
+    -u ANTHROPIC_DEFAULT_SONNET_MODEL \
+    -u ANTHROPIC_DEFAULT_HAIKU_MODEL \
+    -u ANTHROPIC_FOUNDRY_BASE_URL \
+    -u ANTHROPIC_FOUNDRY_BASE_URL_AZURE \
+    -u ANTHROPIC_1M_CONTEXT \
+    -u ANTHROPIC_CUSTOM_HEADERS \
+    -u CLAUDE_CODE_USE_FOUNDRY \
+    -u CLAUDE_CODE_SIMULATE_PROXY_USAGE \
+    -u CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS \
+    "$_bin" --settings '{"apiKeyHelper":""}' "$@"
+}
+
+codex-sub() {
+  local _bin
+  _bin=$(whence -p codex) || { echo "codex not found" >&2; return 127; }
+
+  # Keep ~/.codex/auth.json and config.toml untouched; just prevent inherited
+  # API-key/provider env from overriding the ChatGPT subscription login.
+  env -u OPENAI_API_KEY \
+    -u OPENAI_BASE_URL \
+    -u OPENAI_API_BASE \
+    -u OPENAI_ORG_ID \
+    -u OPENAI_ORGANIZATION \
+    -u OPENAI_PROJECT \
+    -u AZURE_OPENAI_API_KEY \
+    -u AZURE_OPENAI_ENDPOINT \
+    -u AZURE_OPENAI_API_VERSION \
+    -u ANTHROPIC_AUTH_TOKEN \
+    -u ANTHROPIC_API_KEY \
+    -u ANTHROPIC_BASE_URL \
+    "$_bin" "$@"
+}
+
 # Optional Azure wrapper for Anthropic-compatible Claude deployments.
 # This keeps the Azure key in 1Password via apiKeyHelper and prevents the
 # default Anthropic base URL/model from leaking into the Azure session.
