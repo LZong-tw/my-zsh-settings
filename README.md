@@ -14,6 +14,7 @@ This repo keeps the shared shell behavior in git and pushes machine- or org-spec
 - `zsh/.p10k.zsh` — Powerlevel10k prompt configuration
 - `zsh/.zsh.startup-profiler.zsh` — optional portable startup profiling module
 - `zsh/.zshrc.local.example` — template for machine- or org-specific overrides
+- `bin/kubectl-eks-token` — AWS EKS token wrapper for `assume`/Granted + `kubectl`
 - `install.sh` — backs up managed dotfiles, symlinks the shared config, and seeds `~/.zshrc.local`
 - `CLAUDE.md` — Claude Code, 1Password, and tmux -CC notes
 - `examples/claude-api-key-helper.sh.example` — sample `apiKeyHelper` script
@@ -21,6 +22,7 @@ This repo keeps the shared shell behavior in git and pushes machine- or org-spec
 ## What should be committed
 - Shared shell behavior across `.zshenv`, `.zprofile`, `.zshrc`, and `.p10k.zsh`
 - Aliases, wrappers, tmux helpers, prompt config, completion tuning
+- Small helper scripts that should be available from `~/.local/bin`
 - Docs and example files
 
 ## What should stay local
@@ -43,6 +45,7 @@ cd ~/my-zsh-settings
 4. Back up and symlink `~/.p10k.zsh`
 5. Back up and symlink `~/.zsh.startup-profiler.zsh`
 6. Copy `zsh/.zshrc.local.example` to `~/.zshrc.local` if it does not already exist
+7. Install managed helper scripts into `~/.local/bin`
 
 ## After install
 1. Edit `~/.zshrc.local`
@@ -63,6 +66,24 @@ When enabled, both `~/.zprofile` and `~/.zshrc` can write phase timings through 
 
 ## Kubernetes prompt context
 Powerlevel10k uses a custom lazy kube context segment instead of the built-in `kubecontext` segment. The prompt only reads a cache at `$XDG_CACHE_HOME/p10k-kubecontext` or `~/.cache/p10k-kubecontext`; `kubectl`, `kubectx`, and `kubens` refresh that cache in the background after they run.
+
+## AWS EKS credentials for kubectl
+`bin/kubectl-eks-token` is installed to `~/.local/bin/kubectl-eks-token`.
+Point EKS kubeconfig `users[].user.exec.command` at that path and pass the AWS
+profile through `--profile`.
+
+The wrapper first tries `aws eks get-token` with a clean `AWS_PROFILE`. If the
+credential cache is stale, it falls back to Granted:
+
+```bash
+assume --exec 'aws eks get-token ...' kkbox-testing
+```
+
+If Granted still returns expired credentials, the wrapper retries once with
+`assume --no-cache --exec ...`. It keeps stdout reserved for the Kubernetes
+`ExecCredential` JSON and sends Granted status/error messages to stderr, which
+prevents kubectl from seeing malformed plugin output such as
+`client.authentication.k8s.io/__internal`.
 
 ## Optional plugin install
 ```bash

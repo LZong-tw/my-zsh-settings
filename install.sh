@@ -7,6 +7,7 @@ SOURCE_LOCAL_ZSHRC_EXAMPLE="$PROJECT_DIR/zsh/.zshrc.local.example"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INSTALL_PLUGINS=false
 INSTALL_OMZ=true
+INSTALL_LOCAL_BIN=true
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -18,16 +19,21 @@ while [[ $# -gt 0 ]]; do
       INSTALL_OMZ=false
       shift
       ;;
+    --no-local-bin|--skip-local-bin)
+      INSTALL_LOCAL_BIN=false
+      shift
+      ;;
     -h|--help)
-      echo "Usage: $0 [--with-plugins] [--no-oh-my-zsh]"
+      echo "Usage: $0 [--with-plugins] [--no-oh-my-zsh] [--no-local-bin]"
       echo "  --with-plugins: also clone Powerlevel10k and recommended plugins into \
     ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
       echo "  --no-oh-my-zsh: skip auto-installing Oh My Zsh if it's not present"
+      echo "  --no-local-bin: skip installing managed helper scripts into ~/.local/bin"
       exit 0
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [--with-plugins] [--no-oh-my-zsh]"
+      echo "Usage: $0 [--with-plugins] [--no-oh-my-zsh] [--no-local-bin]"
       exit 1
       ;;
   esac
@@ -94,6 +100,16 @@ done
 if [[ ! -f "$TARGET_LOCAL_ZSHRC" && -f "$SOURCE_LOCAL_ZSHRC_EXAMPLE" ]]; then
   cp "$SOURCE_LOCAL_ZSHRC_EXAMPLE" "$TARGET_LOCAL_ZSHRC"
   echo "Created local override template: $TARGET_LOCAL_ZSHRC"
+fi
+
+if [[ "$INSTALL_LOCAL_BIN" = true ]]; then
+  mkdir -p "$HOME/.local/bin"
+  for helper in "$PROJECT_DIR"/bin/*; do
+    [[ -f "$helper" ]] || continue
+    target="$HOME/.local/bin/$(basename "$helper")"
+    install -m 0755 "$helper" "$target"
+    echo "Installed helper: $target"
+  done
 fi
 
 echo "Done! Restart your terminal or run: exec zsh -l"
