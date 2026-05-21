@@ -7,10 +7,11 @@ export ANTHROPIC_BASE_URL_DEFAULT="https://llm-gateway.example.internal"
 export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
 # Claude Code appends /v1/messages; include any gateway prefix needed before /v1.
 # export ANTHROPIC_BASE_URL_JBRIDGE="https://jbridge.example.internal/api"
-# Pin provider-specific model ids from the gateway's model catalog. If the
-# gateway removes explicit 1M aliases, use the accepted bare ids here.
-# export ANTHROPIC_MODEL_JBRIDGE_OPUS="claude-opus-4-7"
-# export ANTHROPIC_MODEL_JBRIDGE_SONNET="claude-sonnet-4-6"
+# Pin provider-specific model ids for Claude Code. Some gateways reject [1m]
+# aliases in raw /v1/messages calls but Claude Code still accepts them via
+# /model; use the Claude Code-accepted id here, not only the raw API catalog.
+# export ANTHROPIC_MODEL_JBRIDGE_OPUS="claude-opus-4-7[1m]"
+# export ANTHROPIC_MODEL_JBRIDGE_SONNET="claude-sonnet-4-6[1m]"
 # export ANTHROPIC_MODEL_JBRIDGE_HAIKU="$ANTHROPIC_MODEL_JBRIDGE_SONNET"
 # export ANTHROPIC_MODEL_JBRIDGE="$ANTHROPIC_MODEL_JBRIDGE_OPUS"
 export GITLAB_API_URL="https://gitlab.example.internal"
