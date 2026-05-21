@@ -72,8 +72,11 @@ Powerlevel10k uses a custom lazy kube context segment instead of the built-in `k
 Point EKS kubeconfig `users[].user.exec.command` at that path and pass the AWS
 profile through `--profile`.
 
-The wrapper first tries `aws eks get-token` with a clean `AWS_PROFILE`. If the
-credential cache is stale, it falls back to Granted:
+The wrapper first uses the current shell's credentials when the shell is already
+assumed into the requested profile (`assume kkbox-testing`, `aws-vault exec
+kkbox-testing`, etc.). If no matching ambient session exists, it tries
+`aws eks get-token` with a clean `AWS_PROFILE`. If the credential cache is stale,
+it falls back to Granted:
 
 ```bash
 assume --exec 'aws eks get-token ...' kkbox-testing
@@ -83,7 +86,8 @@ If Granted still returns expired credentials, the wrapper retries once with
 `assume --no-cache --exec ...`. It keeps stdout reserved for the Kubernetes
 `ExecCredential` JSON and sends Granted status/error messages to stderr, which
 prevents kubectl from seeing malformed plugin output such as
-`client.authentication.k8s.io/__internal`.
+`client.authentication.k8s.io/__internal`. In interactive terminals, fallback
+stderr is passed through so MFA/error prompts remain visible.
 
 ## Optional plugin install
 ```bash

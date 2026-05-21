@@ -57,6 +57,24 @@ run_profile_aws() {
   fi
 }
 
+ambient_profile_matches() {
+  [[ -n "$PROFILE" ]] || return 1
+  [[ -n "${AWS_ACCESS_KEY_ID:-}" ]] || return 1
+
+  [[ "${AWS_PROFILE:-}" == "$PROFILE" ]] && return 0
+  [[ "${AWS_DEFAULT_PROFILE:-}" == "$PROFILE" ]] && return 0
+  [[ "${AWS_VAULT:-}" == "$PROFILE" ]] && return 0
+  [[ "${GRANTED_AWS_PROFILE:-}" == "$PROFILE" ]] && return 0
+  [[ "${GRANTED_ALIAS_CONFIGURED:-}" == "$PROFILE" ]] && return 0
+
+  return 1
+}
+
+run_ambient_aws() {
+  ambient_profile_matches || return 1
+  "$AWS_BIN" "${AWS_ARGS[@]}"
+}
+
 remember_attempt() {
   cp "$STDOUT_FILE" "$LAST_STDOUT_FILE" 2>/dev/null || true
   cp "$STDERR_FILE" "$LAST_STDERR_FILE" 2>/dev/null || true
@@ -127,12 +145,26 @@ run_assume() {
   local no_cache="$1"
   local assume_shell_command
   assume_shell_command="$(build_assume_command "$no_cache")"
-  "$ASSUME_SHELL" -lc "$assume_shell_command" >"$STDOUT_FILE" 2>"$STDERR_FILE"
+  if [[ -t 2 ]]; then
+    "$ASSUME_SHELL" -lc "$assume_shell_command" >"$STDOUT_FILE" 2> >(tee "$STDERR_FILE" >&2)
+  else
+    "$ASSUME_SHELL" -lc "$assume_shell_command" >"$STDOUT_FILE" 2>"$STDERR_FILE"
+  fi
 }
 
-# Try plain AWS_PROFILE first. If that path has no usable cached credentials,
-# fall back to Granted. Keep stdout strictly JSON because kubectl exec plugins
-# fail if human-readable refresh messages leak into stdout.
+# Prefer a matching already-assumed shell (Granted/aws-vault). This keeps
+# `assume kkbox-testing && kubectl ...` deterministic without re-prompting from
+# inside the Kubernetes exec plugin. If no matching ambient session exists, try
+# plain AWS_PROFILE; if that path has no usable cached credentials, fall back to
+# Granted. Keep stdout strictly JSON because kubectl exec plugins fail if
+# human-readable refresh messages leak into stdout.
+if ambient_profile_matches; then
+  if run_ambient_aws >"$STDOUT_FILE" 2>"$STDERR_FILE" && is_valid_exec_credential "$STDOUT_FILE"; then
+    emit_success
+  fi
+  remember_attempt
+fi
+
 if run_profile_aws >"$STDOUT_FILE" 2>"$STDERR_FILE" && is_valid_exec_credential "$STDOUT_FILE"; then
   emit_success
 fi
