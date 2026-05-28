@@ -793,12 +793,62 @@ devops() {
 # ===========================================
 # 11. CLAUDE CODE ROUTER
 # ===========================================
-cclaude() {
-    if ! ccr status &>/dev/null; then
-        nohup ccr start > /dev/null 2>&1 &
-        disown; sleep 1
+_ccr_health() {
+    command curl -fsS -m 1 "${CCR_HEALTH_URL:-http://127.0.0.1:${CCR_PORT:-3456}/health}" >/dev/null 2>&1
+}
+
+_ccr_running() {
+    command ccr status >/dev/null 2>&1 || _ccr_health
+}
+
+ccr-start() {
+    local _bin _op_bin _token_ref
+    _bin=$(whence -p ccr) || { echo "ccr not found" >&2; return 127; }
+
+    if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" && "$ANTHROPIC_AUTH_TOKEN" != op://* ]]; then
+        "$_bin" start "$@"
+        return
     fi
-    (source <(command ccr activate) && claude "$@")
+
+    _token_ref="${CCR_ANTHROPIC_AUTH_TOKEN_OP_REF:-${ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT:-${ANTHROPIC_AUTH_TOKEN_OP_REF:-}}}"
+    if [[ -z "$_token_ref" ]]; then
+        echo "Missing CCR_ANTHROPIC_AUTH_TOKEN_OP_REF or ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT for ccr-start." >&2
+        return 1
+    fi
+
+    _op_bin=${OP_BIN:-}
+    if [[ -z "$_op_bin" ]]; then
+        _op_bin=$(command -v op 2>/dev/null) || { echo "op not found; cannot resolve $_token_ref" >&2; return 127; }
+    elif [[ ! -x "$_op_bin" ]]; then
+        echo "op not executable: $_op_bin" >&2
+        return 127
+    fi
+
+    env \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1 \
+        ANTHROPIC_AUTH_TOKEN="$_token_ref" \
+        "$_op_bin" run -- "$_bin" start "$@"
+}
+
+cclaude() {
+    local _try
+    if ! _ccr_running; then
+        ccr-start > /dev/null 2>&1 &
+        disown
+        for _try in {1..20}; do
+            _ccr_running && break
+            sleep 0.25
+        done
+    fi
+    if ! _ccr_running; then
+        echo "ccr is not running; run ccr-start to see the startup error." >&2
+        return 1
+    fi
+    (source <(command ccr activate) && command claude "$@")
 }
 _zsh_startup_mark functions
 

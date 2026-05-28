@@ -24,6 +24,9 @@ export GITLAB_API_URL="https://gitlab.example.internal"
 export ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT="op://Vault/Item/anthropic_auth_token"
 export ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE="op://Vault/Item/anthropic_auth_token_jbridge"
 export ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT"
+# Optional 1Password ref used by ccr-start for ~/.claude-code-router/config.json
+# entries such as "api_key": "$ANTHROPIC_AUTH_TOKEN".
+# export CCR_ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT"
 export GITLAB_PERSONAL_ACCESS_TOKEN_OP_REF="op://Vault/Item/gitlab_personal_access_token"
 export PAGERDUTY_API_KEY_OP_REF="op://Vault/Item/pagerduty_api_key"
 export PAGERDUTY_USER_API_KEY_OP_REF="op://Vault/Item/pagerduty_user_api_key"
