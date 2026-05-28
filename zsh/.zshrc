@@ -848,7 +848,7 @@ cclaude() {
         echo "ccr is not running; run ccr-start to see the startup error." >&2
         return 1
     fi
-    (source <(command ccr activate) && command claude "$@")
+    (source <(command ccr activate) && command claude --settings '{"apiKeyHelper":""}' "$@")
 }
 _zsh_startup_mark functions
 
