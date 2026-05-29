@@ -143,6 +143,8 @@ setopt hist_ignore_dups       # 連續重複不記
 setopt hist_ignore_space      # 空格開頭不記（隱私指令）
 setopt hist_verify            # !歷史展開後先確認再執行
 setopt share_history          # 多 terminal 即時共享歷史
+alias history="history 0"
+TIMEFMT=$'\nreal\t%E\nuser\t%U\nsys\t%S\ncpu\t%P'
 
 # --- Directories (from lib/directories.zsh) ---
 setopt auto_cd auto_pushd pushd_ignore_dups pushdminus
@@ -163,8 +165,26 @@ setopt multios long_list_jobs interactivecomments
 autoload -U colors && colors
 setopt prompt_subst
 
+# --- Color support (Kali-inspired, guarded for portability) ---
+if (( $+commands[dircolors] )); then
+  if [[ -r "$HOME/.dircolors" ]]; then
+    eval "$(dircolors -b "$HOME/.dircolors")"
+  else
+    eval "$(dircolors -b)"
+  fi
+  export LS_COLORS="${LS_COLORS}:ow=30;44:"
+fi
+export LESS_TERMCAP_mb=$'\E[1;31m'
+export LESS_TERMCAP_md=$'\E[1;36m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;33m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[1;32m'
+export LESS_TERMCAP_ue=$'\E[0m'
+
 # --- Key bindings (from lib/key-bindings.zsh) ---
 bindkey -e
+bindkey '^U' backward-kill-line
 # Up/Down: prefix-aware history search (打 git 再按↑ 只搜 git 開頭)
 autoload -U up-line-or-beginning-search down-line-or-beginning-search
 zle -N up-line-or-beginning-search
@@ -176,6 +196,8 @@ bindkey '^[[H' beginning-of-line
 bindkey '^[[F' end-of-line
 bindkey '^[[1~' beginning-of-line
 bindkey '^[[4~' end-of-line
+bindkey '^[[5~' beginning-of-buffer-or-history
+bindkey '^[[6~' end-of-buffer-or-history
 # Ctrl+Left/Right: 跳字
 bindkey '^[[1;5C' forward-word
 bindkey '^[[1;5D' backward-word
@@ -379,12 +401,21 @@ killport() { lsof -ti:"$1" | xargs kill -9; }
 # ls / eza
 if (( $+commands[eza] )); then
   alias ls="eza --icons --git"
+  alias l="eza --icons --git"
   alias ll="eza -l --icons --git"
   alias la="eza -la --icons --git"
 else
+  if command ls --color=auto . >/dev/null 2>&1; then
+    alias ls="ls --color=auto"
+  fi
+  alias l="ls -CF"
   alias ll="ls -lh"
   alias la="ls -lAh"
 fi
+if (( $+commands[diff] )) && command diff --color=auto /dev/null /dev/null >/dev/null 2>&1; then
+  alias diff="diff --color=auto"
+fi
+(( $+commands[ip] )) && alias ip="ip --color=auto"
 
 alias reload="exec zsh"
 tmuxcc() { ITERM_ENABLE_SHELL_INTEGRATION_WITH_TMUX=1 command tmux -CC "$@"; }
@@ -851,6 +882,10 @@ cclaude() {
     (source <(command ccr activate) && command claude --settings '{"apiKeyHelper":""}' "$@")
 }
 _zsh_startup_mark functions
+
+# Debian/Kali command-not-found helper, when present.
+[[ -r /etc/zsh_command_not_found ]] && source /etc/zsh_command_not_found
+_zsh_startup_mark command-not-found
 
 # ===========================================
 # 12. LOCAL OVERRIDES

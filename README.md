@@ -25,6 +25,21 @@ This repo keeps the shared shell behavior in git and pushes machine- or org-spec
 - Small helper scripts that should be available from `~/.local/bin`
 - Docs and example files
 
+## Kali-inspired interactive defaults
+The shared `.zshrc` keeps Powerlevel10k as the prompt source of truth, but it
+also carries the useful parts of Kali's terminal defaults:
+
+- Emacs-style editing plus `Ctrl+U`, `Ctrl+Left/Right`, `Ctrl+Delete`,
+  `PageUp/PageDown`, `Shift+Tab`, `Ctrl+R`, and `Ctrl+X Ctrl+E`
+- case-insensitive menu completion with cached `compinit`
+- duplicate-aware shared history, `history` showing the full list, and a
+  readable `time` command format
+- GNU color defaults for `ls`, `diff`, `ip`, `less`, and man pages when the
+  commands support them
+- `ll`, `la`, and `l` aliases, preferring `eza` when available
+- Debian/Kali `command-not-found` integration when `/etc/zsh_command_not_found`
+  exists
+
 ## What should stay local
 - `~/.zshrc.local`
 - `~/.claude/settings.local.json` or `~/.claude/settings.json`
