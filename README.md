@@ -36,9 +36,12 @@ also carries the useful parts of Kali's terminal defaults:
   readable `time` command format
 - GNU color defaults for `ls`, `diff`, `ip`, `less`, and man pages when the
   commands support them
-- `ll`, `la`, and `l` aliases, preferring `eza` when available
+- `ls`, `l`, `ll`, and `la` aliases, preferring `eza` when available
 - Debian/Kali `command-not-found` integration when `/etc/zsh_command_not_found`
   exists
+
+Prompt appearance stays owned by `zsh/.p10k.zsh`; Kali-inspired defaults should
+improve interactive behavior without changing the Powerlevel10k layout.
 
 ## What should stay local
 - `~/.zshrc.local`
