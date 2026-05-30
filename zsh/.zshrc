@@ -31,7 +31,8 @@ if [[ -s "$NVM_DIR/alias/default" ]]; then
   _nvm_node_bin="$NVM_DIR/versions/node/v${_nvm_ver#v}/bin"
   [[ -d "$_nvm_node_bin" ]] || _nvm_node_bin=""
 fi
-[[ -z "${_nvm_node_bin:-}" ]] && _nvm_node_bin="$(ls -d "$NVM_DIR/versions/node/"*/bin 2>/dev/null | sort -V | tail -1)"
+# (N) null_glob qualifier: expands to nothing (no error) when no node is installed
+[[ -z "${_nvm_node_bin:-}" ]] && _nvm_node_bin="$(print -rl -- "$NVM_DIR"/versions/node/*/bin(N) | sort -V | tail -1)"
 [[ -n "$_nvm_node_bin" ]] && export PATH="$_nvm_node_bin:$PATH"
 unset _nvm_ver _nvm_node_bin
 # Strip relative paths and empty entries from inherited PATH
@@ -255,11 +256,8 @@ _completion_refresh_stamp="${ZSH_COMPDUMP}.refresh"
 _completion_refresh_interval=86400
 _completion_refresh_delay=120
 _completion_refresh_lock="${ZSH_COMPDUMP}.refresh.lock"
-# Add plugin completion directories to fpath
-fpath=(
-  $HOME/.oh-my-zsh/plugins/extract
-  $fpath
-)
+# Add plugin completion directories to fpath (only when present)
+[[ -d "$HOME/.oh-my-zsh/plugins/extract" ]] && fpath=("$HOME/.oh-my-zsh/plugins/extract" $fpath)
 
 _now_epoch() {
   if (( ${+EPOCHSECONDS} )); then
@@ -335,14 +333,45 @@ zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-
 # 7. PLUGINS (direct source, no framework)
 # ===========================================
 _omz="$HOME/.oh-my-zsh"
-source "$_omz/custom/themes/powerlevel10k/powerlevel10k.zsh-theme"
-source <(command zoxide init zsh)
-source "$_omz/plugins/extract/extract.plugin.zsh"
-source "$_omz/plugins/sudo/sudo.plugin.zsh"
-source "$_omz/plugins/colored-man-pages/colored-man-pages.plugin.zsh"
-source "$_omz/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+# Source the first readable candidate; skip silently if none exists.
+# Keeps this config portable across an oh-my-zsh layout (Mac/dev boxes) and
+# distro packages such as Kali/Debian's /usr/share/* without erroring on startup.
+_zsh_source_first() {
+  local _f
+  for _f in "$@"; do
+    if [[ -r "$_f" ]]; then
+      source "$_f"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Powerlevel10k theme (prompt appearance)
+_zsh_source_first \
+  "$_omz/custom/themes/powerlevel10k/powerlevel10k.zsh-theme" \
+  "/usr/share/powerlevel10k/powerlevel10k.zsh-theme" \
+  "/usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme"
+
+# zoxide (smart cd) — only when the binary is installed
+(( $+commands[zoxide] )) && source <(command zoxide init zsh)
+
+# oh-my-zsh helper plugins (optional; present only when oh-my-zsh is installed)
+_zsh_source_first "$_omz/plugins/extract/extract.plugin.zsh"
+_zsh_source_first "$_omz/plugins/sudo/sudo.plugin.zsh"
+_zsh_source_first "$_omz/plugins/colored-man-pages/colored-man-pages.plugin.zsh"
+
+# autosuggestions — prefer oh-my-zsh custom, fall back to distro package
+_zsh_source_first \
+  "$_omz/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" \
+  "/usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+
 # syntax-highlighting must be last
-source "$_omz/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+_zsh_source_first \
+  "$_omz/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
+  "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+
+unset -f _zsh_source_first
 unset _omz
 _zsh_startup_mark plugins
 
