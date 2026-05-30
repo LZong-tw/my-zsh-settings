@@ -3,8 +3,9 @@
 
 # Machine- or org-specific exports.
 export AWS_REGION="ap-northeast-1"
-export ANTHROPIC_BASE_URL_DEFAULT="https://llm-gateway.example.internal"
-export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
+# Gateway for Claude Code: leave commented on subscription/OAuth machines (an unreachable BASE_URL makes Claude Code fail with ConnectionRefused at startup); uncomment only when this machine routes through a real gateway.
+# export ANTHROPIC_BASE_URL_DEFAULT="https://llm-gateway.example.internal"
+# export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
 # Claude Code appends /v1/messages; include any gateway prefix needed before /v1.
 # export ANTHROPIC_BASE_URL_JBRIDGE="https://jbridge.example.internal/api"
 # Pin provider-specific model ids for Claude Code. Some gateways reject [1m]
