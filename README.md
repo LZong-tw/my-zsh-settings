@@ -25,9 +25,10 @@ This repo keeps the shared shell behavior in git and pushes machine- or org-spec
 - Small helper scripts that should be available from `~/.local/bin`
 - Docs and example files
 
-## Kali-inspired interactive defaults
-The shared `.zshrc` keeps Powerlevel10k as the prompt source of truth, but it
-also carries the useful parts of Kali's terminal defaults:
+## Kali features carried by this repo
+The shared `.zshrc` keeps Powerlevel10k as the preferred prompt, but it now
+bundles Kali's interactive defaults directly so they travel with the repo to any
+machine (Kali, other Linux, or macOS) — not just when you happen to be on Kali:
 
 - Emacs-style editing plus `Ctrl+U`, `Ctrl+Left/Right`, `Ctrl+Delete`,
   `PageUp/PageDown`, `Shift+Tab`, `Ctrl+R`, and `Ctrl+X Ctrl+E`
@@ -37,11 +38,25 @@ also carries the useful parts of Kali's terminal defaults:
 - GNU color defaults for `ls`, `diff`, `ip`, `less`, and man pages when the
   commands support them
 - `ls`, `l`, `ll`, and `la` aliases, preferring `eza` when available
+- Kali's full **zsh-syntax-highlighting color theme** (the `ZSH_HIGHLIGHT_STYLES`
+  set), applied whenever the highlighter loads
+- Kali's subtle grey **autosuggestion color** (`fg=#999`)
+- Kali setopts `magicequalsubst`, `numericglobsort`, and `PROMPT_EOL_MARK=""`
 - Debian/Kali `command-not-found` integration when `/etc/zsh_command_not_found`
   exists
 
-Prompt appearance stays owned by `zsh/.p10k.zsh`; Kali-inspired defaults should
-improve interactive behavior without changing the Powerlevel10k layout.
+### Plugin/theme discovery is portable
+Powerlevel10k, zsh-autosuggestions, and zsh-syntax-highlighting are sourced from
+the first location that exists, in this order: oh-my-zsh custom dirs →
+Debian/Kali `/usr/share/*` packages → Homebrew (`/opt/homebrew` and
+`/usr/local`). A machine without oh-my-zsh uses its distro/Homebrew packages
+instead of erroring on startup.
+
+### Prompt: p10k with a Kali fallback
+When Powerlevel10k is available it owns the prompt (via `zsh/.p10k.zsh`). When it
+is **not** found, `.zshrc` falls back to Kali's native two-line `㉿` prompt,
+including the `Ctrl+P` one-line/two-line toggle and the blank-line-before-prompt
+behaviour. Either way you keep a usable, Kali-flavored prompt.
 
 ## What should stay local
 - `~/.zshrc.local`
@@ -139,5 +154,11 @@ mv ~/.zshrc.backup-<timestamp> ~/.zshrc
 ```
 
 ## Flags
+- `--with-deps`: install shell dependencies via the OS package manager — apt on
+  Debian/Kali (`zsh-syntax-highlighting`, `zsh-autosuggestions`,
+  `command-not-found`, `zoxide`, `eza`, `fzf`) or Homebrew on macOS (the same
+  set plus `powerlevel10k`). Powerlevel10k is not packaged on Debian/Kali, so use
+  `--with-plugins` to clone it there.
 - `--with-plugins`: clone Powerlevel10k, zsh-autosuggestions, and zsh-syntax-highlighting
 - `--no-oh-my-zsh`: skip automatic Oh My Zsh installation
+- `--no-local-bin`: skip installing managed helper scripts into `~/.local/bin`

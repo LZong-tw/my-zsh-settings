@@ -8,11 +8,28 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INSTALL_PLUGINS=false
 INSTALL_OMZ=true
 INSTALL_LOCAL_BIN=true
+INSTALL_DEPS=false
+
+print_usage() {
+  echo "Usage: $0 [--with-deps] [--with-plugins] [--no-oh-my-zsh] [--no-local-bin]"
+  echo "  --with-deps:    install shell deps via the OS package manager"
+  echo "                  (apt on Debian/Kali, Homebrew on macOS):"
+  echo "                  zsh-syntax-highlighting, zsh-autosuggestions,"
+  echo "                  command-not-found, zoxide, eza, fzf (+ powerlevel10k on brew)"
+  echo "  --with-plugins: also clone Powerlevel10k and recommended plugins into \
+${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+  echo "  --no-oh-my-zsh: skip auto-installing Oh My Zsh if it's not present"
+  echo "  --no-local-bin: skip installing managed helper scripts into ~/.local/bin"
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --with-plugins|--install-plugins)
       INSTALL_PLUGINS=true
+      shift
+      ;;
+    --with-deps|--install-deps)
+      INSTALL_DEPS=true
       shift
       ;;
     --no-oh-my-zsh|--skip-oh-my-zsh)
@@ -24,20 +41,55 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     -h|--help)
-      echo "Usage: $0 [--with-plugins] [--no-oh-my-zsh] [--no-local-bin]"
-      echo "  --with-plugins: also clone Powerlevel10k and recommended plugins into \
-    ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
-      echo "  --no-oh-my-zsh: skip auto-installing Oh My Zsh if it's not present"
-      echo "  --no-local-bin: skip installing managed helper scripts into ~/.local/bin"
+      print_usage
       exit 0
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [--with-plugins] [--no-oh-my-zsh] [--no-local-bin]"
+      print_usage
       exit 1
       ;;
   esac
 done
+
+# Install shell dependencies through the OS package manager so the repo can
+# carry Kali's interactive features (syntax highlighting, autosuggestions,
+# command-not-found) plus the modern CLI tools the .zshrc expects.
+install_deps() {
+  if command -v apt-get >/dev/null 2>&1; then
+    echo "Detected apt (Debian/Kali). Installing shell dependencies..."
+    local SUDO=""
+    [[ "${EUID:-$(id -u)}" -eq 0 ]] || SUDO="sudo"
+    $SUDO apt-get update -qq || true
+    # Powerlevel10k is not packaged on Debian/Kali; use --with-plugins for it.
+    $SUDO apt-get install -y \
+      zsh \
+      zsh-syntax-highlighting \
+      zsh-autosuggestions \
+      command-not-found \
+      zoxide \
+      eza \
+      fzf \
+      || echo "Warning: some apt packages failed to install" >&2
+  elif command -v brew >/dev/null 2>&1; then
+    echo "Detected Homebrew (macOS). Installing shell dependencies..."
+    brew install \
+      powerlevel10k \
+      zsh-syntax-highlighting \
+      zsh-autosuggestions \
+      zoxide \
+      eza \
+      fzf \
+      || echo "Warning: some Homebrew formulae failed to install" >&2
+  else
+    echo "No apt or Homebrew found; skipping automatic dependency install." >&2
+    echo "Install zsh-syntax-highlighting, zsh-autosuggestions, zoxide, eza, and fzf manually." >&2
+  fi
+}
+
+if [[ "$INSTALL_DEPS" = true ]]; then
+  install_deps
+fi
 
 if [[ ! -f "$PROJECT_DIR/zsh/.zshrc" ]]; then
   echo "Cannot find source zshrc: $PROJECT_DIR/zsh/.zshrc" >&2

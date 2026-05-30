@@ -161,6 +161,10 @@ autoload -Uz url-quote-magic bracketed-paste-magic
 zle -N self-insert url-quote-magic
 zle -N bracketed-paste bracketed-paste-magic
 setopt multios long_list_jobs interactivecomments
+# Kali defaults: a=b style filename expansion, numeric-aware glob sort
+setopt magicequalsubst numericglobsort
+# Hide the end-of-line '%' marker (Kali default)
+PROMPT_EOL_MARK=""
 
 # --- Theme support (from lib/theme-and-appearance.zsh) ---
 autoload -U colors && colors
@@ -347,11 +351,17 @@ _zsh_source_first() {
   return 1
 }
 
-# Powerlevel10k theme (prompt appearance)
-_zsh_source_first \
+# Powerlevel10k theme (prompt appearance). Candidates cover oh-my-zsh custom,
+# Debian/Kali packages, and Homebrew (Apple Silicon + Intel). _zsh_p10k_loaded
+# gates the Kali prompt fallback in section 14.
+if _zsh_source_first \
   "$_omz/custom/themes/powerlevel10k/powerlevel10k.zsh-theme" \
   "/usr/share/powerlevel10k/powerlevel10k.zsh-theme" \
-  "/usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme"
+  "/usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme" \
+  "/opt/homebrew/share/powerlevel10k/powerlevel10k.zsh-theme" \
+  "/usr/local/share/powerlevel10k/powerlevel10k.zsh-theme"; then
+  _zsh_p10k_loaded=1
+fi
 
 # zoxide (smart cd) — only when the binary is installed
 (( $+commands[zoxide] )) && source <(command zoxide init zsh)
@@ -361,15 +371,67 @@ _zsh_source_first "$_omz/plugins/extract/extract.plugin.zsh"
 _zsh_source_first "$_omz/plugins/sudo/sudo.plugin.zsh"
 _zsh_source_first "$_omz/plugins/colored-man-pages/colored-man-pages.plugin.zsh"
 
-# autosuggestions — prefer oh-my-zsh custom, fall back to distro package
-_zsh_source_first \
+# autosuggestions — prefer oh-my-zsh custom, fall back to distro/Homebrew package
+if _zsh_source_first \
   "$_omz/custom/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" \
-  "/usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+  "/usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh" \
+  "/opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh" \
+  "/usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh"; then
+  # Kali default suggestion color (subtle grey).
+  ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#999'
+fi
 
 # syntax-highlighting must be last
-_zsh_source_first \
+if _zsh_source_first \
   "$_omz/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
-  "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+  "/usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
+  "/opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" \
+  "/usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"; then
+  # Kali's syntax-highlighting color theme, ported verbatim from Kali's default
+  # /etc/skel/.zshrc so highlighting matches the Kali look on any machine.
+  ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern)
+  ZSH_HIGHLIGHT_STYLES[default]=none
+  ZSH_HIGHLIGHT_STYLES[unknown-token]=underline
+  ZSH_HIGHLIGHT_STYLES[reserved-word]=fg=cyan,bold
+  ZSH_HIGHLIGHT_STYLES[suffix-alias]=fg=green,underline
+  ZSH_HIGHLIGHT_STYLES[global-alias]=fg=green,bold
+  ZSH_HIGHLIGHT_STYLES[precommand]=fg=green,underline
+  ZSH_HIGHLIGHT_STYLES[commandseparator]=fg=blue,bold
+  ZSH_HIGHLIGHT_STYLES[autodirectory]=fg=green,underline
+  ZSH_HIGHLIGHT_STYLES[path]=bold
+  ZSH_HIGHLIGHT_STYLES[path_pathseparator]=
+  ZSH_HIGHLIGHT_STYLES[path_prefix_pathseparator]=
+  ZSH_HIGHLIGHT_STYLES[globbing]=fg=blue,bold
+  ZSH_HIGHLIGHT_STYLES[history-expansion]=fg=blue,bold
+  ZSH_HIGHLIGHT_STYLES[command-substitution]=none
+  ZSH_HIGHLIGHT_STYLES[command-substitution-delimiter]=fg=magenta,bold
+  ZSH_HIGHLIGHT_STYLES[process-substitution]=none
+  ZSH_HIGHLIGHT_STYLES[process-substitution-delimiter]=fg=magenta,bold
+  ZSH_HIGHLIGHT_STYLES[single-hyphen-option]=fg=green
+  ZSH_HIGHLIGHT_STYLES[double-hyphen-option]=fg=green
+  ZSH_HIGHLIGHT_STYLES[back-quoted-argument]=none
+  ZSH_HIGHLIGHT_STYLES[back-quoted-argument-delimiter]=fg=blue,bold
+  ZSH_HIGHLIGHT_STYLES[single-quoted-argument]=fg=yellow
+  ZSH_HIGHLIGHT_STYLES[double-quoted-argument]=fg=yellow
+  ZSH_HIGHLIGHT_STYLES[dollar-quoted-argument]=fg=yellow
+  ZSH_HIGHLIGHT_STYLES[rc-quote]=fg=magenta
+  ZSH_HIGHLIGHT_STYLES[dollar-double-quoted-argument]=fg=magenta,bold
+  ZSH_HIGHLIGHT_STYLES[back-double-quoted-argument]=fg=magenta,bold
+  ZSH_HIGHLIGHT_STYLES[back-dollar-quoted-argument]=fg=magenta,bold
+  ZSH_HIGHLIGHT_STYLES[assign]=none
+  ZSH_HIGHLIGHT_STYLES[redirection]=fg=blue,bold
+  ZSH_HIGHLIGHT_STYLES[comment]=fg=black,bold
+  ZSH_HIGHLIGHT_STYLES[named-fd]=none
+  ZSH_HIGHLIGHT_STYLES[numeric-fd]=none
+  ZSH_HIGHLIGHT_STYLES[arg0]=fg=cyan
+  ZSH_HIGHLIGHT_STYLES[bracket-error]=fg=red,bold
+  ZSH_HIGHLIGHT_STYLES[bracket-level-1]=fg=blue,bold
+  ZSH_HIGHLIGHT_STYLES[bracket-level-2]=fg=green,bold
+  ZSH_HIGHLIGHT_STYLES[bracket-level-3]=fg=magenta,bold
+  ZSH_HIGHLIGHT_STYLES[bracket-level-4]=fg=yellow,bold
+  ZSH_HIGHLIGHT_STYLES[bracket-level-5]=fg=cyan,bold
+  ZSH_HIGHLIGHT_STYLES[cursor-matchingbracket]=standout
+fi
 
 unset -f _zsh_source_first
 unset _omz
@@ -949,7 +1011,62 @@ _zsh_startup_mark background
 # ===========================================
 # 14. FINISH
 # ===========================================
-[[ ! -f "$_zsh_p10k_file" ]] || source "$_zsh_p10k_file"
+# Prompt: Powerlevel10k when available, otherwise Kali's native two-line prompt.
+if [[ -n "${_zsh_p10k_loaded:-}" ]]; then
+    [[ ! -f "$_zsh_p10k_file" ]] || source "$_zsh_p10k_file"
+else
+    # --- Kali prompt fallback (ported from Kali's default .zshrc) ---
+    # Active only when Powerlevel10k could not be loaded, so the look stays
+    # close to stock Kali. p10k remains the preferred prompt when present.
+    [[ -n "${debian_chroot:-}" ]] || { [[ -r /etc/debian_chroot ]] && debian_chroot=$(</etc/debian_chroot); }
+    PROMPT_ALTERNATIVE="${PROMPT_ALTERNATIVE:-twoline}"
+    NEWLINE_BEFORE_PROMPT="${NEWLINE_BEFORE_PROMPT:-yes}"
+    VIRTUAL_ENV_DISABLE_PROMPT=1
+
+    configure_prompt() {
+        local prompt_symbol=㉿
+        case "$PROMPT_ALTERNATIVE" in
+            twoline)
+                PROMPT=$'%F{%(#.blue.green)}┌──${debian_chroot:+($debian_chroot)─}${VIRTUAL_ENV:+($(basename $VIRTUAL_ENV))─}(%B%F{%(#.red.blue)}%n'$prompt_symbol$'%m%b%F{%(#.blue.green)})-[%B%F{reset}%(6~.%-1~/…/%4~.%5~)%b%F{%(#.blue.green)}]\n└─%B%(#.%F{red}#.%F{blue}$)%b%F{reset} '
+                ;;
+            oneline)
+                PROMPT=$'${debian_chroot:+($debian_chroot)}${VIRTUAL_ENV:+($(basename $VIRTUAL_ENV))}%B%F{%(#.red.blue)}%n@%m%b%F{reset}:%B%F{%(#.blue.green)}%~%b%F{reset}%(#.#.$) '
+                RPROMPT=
+                ;;
+            backtrack)
+                PROMPT=$'${debian_chroot:+($debian_chroot)}${VIRTUAL_ENV:+($(basename $VIRTUAL_ENV))}%B%F{red}%n@%m%b%F{reset}:%B%F{blue}%~%b%F{reset}%(#.#.$) '
+                RPROMPT=
+                ;;
+        esac
+    }
+    configure_prompt
+
+    # Ctrl+P toggles between the two-line and one-line Kali prompt.
+    toggle_oneline_prompt() {
+        if [[ "$PROMPT_ALTERNATIVE" = oneline ]]; then
+            PROMPT_ALTERNATIVE=twoline
+        else
+            PROMPT_ALTERNATIVE=oneline
+        fi
+        configure_prompt
+        zle reset-prompt
+    }
+    zle -N toggle_oneline_prompt
+    bindkey ^P toggle_oneline_prompt
+
+    # Blank line before each prompt except the first (Kali behaviour).
+    _kali_newline_before_prompt() {
+        if [[ "$NEWLINE_BEFORE_PROMPT" = yes ]]; then
+            if [[ -z "${_NEW_LINE_BEFORE_PROMPT:-}" ]]; then
+                _NEW_LINE_BEFORE_PROMPT=1
+            else
+                print ""
+            fi
+        fi
+    }
+    add-zsh-hook precmd _kali_newline_before_prompt
+fi
+unset _zsh_p10k_loaded
 if [[ "$TERM_PROGRAM" == "kiro" ]]; then
     [[ -f "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh" ]] && . "${HOME}/Library/Application Support/kiro-cli/shell/zshrc.post.zsh"
     _kiro_shell_integration="/Applications/Kiro.app/Contents/Resources/app/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh"
