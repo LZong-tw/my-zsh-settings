@@ -192,7 +192,7 @@
   #################################[ os_icon: os identifier ]##################################
   # OS identifier color.
   typeset -g POWERLEVEL9K_OS_ICON_FOREGROUND=16
-  typeset -g POWERLEVEL9K_OS_ICON_BACKGROUND=255
+  typeset -g POWERLEVEL9K_OS_ICON_BACKGROUND=254
   # Custom icon.
   # typeset -g POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='⭐'
 
@@ -524,14 +524,14 @@
   typeset -g POWERLEVEL9K_STATUS_OK=true
   typeset -g POWERLEVEL9K_STATUS_OK_VISUAL_IDENTIFIER_EXPANSION='✔'
   typeset -g POWERLEVEL9K_STATUS_OK_FOREGROUND=108
-  typeset -g POWERLEVEL9K_STATUS_OK_BACKGROUND=16
+  typeset -g POWERLEVEL9K_STATUS_OK_BACKGROUND=237
 
   # Status when some part of a pipe command fails but the overall exit status is zero. It may look
   # like this: 1|0.
   typeset -g POWERLEVEL9K_STATUS_OK_PIPE=true
   typeset -g POWERLEVEL9K_STATUS_OK_PIPE_VISUAL_IDENTIFIER_EXPANSION='✔'
   typeset -g POWERLEVEL9K_STATUS_OK_PIPE_FOREGROUND=108
-  typeset -g POWERLEVEL9K_STATUS_OK_PIPE_BACKGROUND=16
+  typeset -g POWERLEVEL9K_STATUS_OK_PIPE_BACKGROUND=237
 
   # Status when it's just an error code (e.g., '1'). No need to show it if prompt_char is enabled as
   # it will signify error by turning red.
@@ -573,7 +573,7 @@
   #######################[ background_jobs: presence of background jobs ]#######################
   # Background jobs color.
   typeset -g POWERLEVEL9K_BACKGROUND_JOBS_FOREGROUND=110
-  typeset -g POWERLEVEL9K_BACKGROUND_JOBS_BACKGROUND=16
+  typeset -g POWERLEVEL9K_BACKGROUND_JOBS_BACKGROUND=237
   # Don't show the number of background jobs.
   typeset -g POWERLEVEL9K_BACKGROUND_JOBS_VERBOSE=false
   # Custom icon.
@@ -582,7 +582,7 @@
   #######################[ direnv: direnv status (https://direnv.net/) ]########################
   # Direnv color.
   typeset -g POWERLEVEL9K_DIRENV_FOREGROUND=220
-  typeset -g POWERLEVEL9K_DIRENV_BACKGROUND=16
+  typeset -g POWERLEVEL9K_DIRENV_BACKGROUND=237
   # Custom icon.
   # typeset -g POWERLEVEL9K_DIRENV_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -591,7 +591,7 @@
   # Tip:  Override these parameters for ${TOOL} with POWERLEVEL9K_ASDF_${TOOL}_FOREGROUND and
   # POWERLEVEL9K_ASDF_${TOOL}_BACKGROUND.
   typeset -g POWERLEVEL9K_ASDF_FOREGROUND=16
-  typeset -g POWERLEVEL9K_ASDF_BACKGROUND=255
+  typeset -g POWERLEVEL9K_ASDF_BACKGROUND=254
 
   # There are four parameters that can be used to hide asdf tools. Each parameter describes
   # conditions under which a tool gets hidden. Parameters can hide tools but not unhide them. If at
@@ -680,7 +680,7 @@
 
   # .NET Core version from asdf.
   typeset -g POWERLEVEL9K_ASDF_DOTNET_CORE_FOREGROUND=16
-  typeset -g POWERLEVEL9K_ASDF_DOTNET_CORE_BACKGROUND=176
+  typeset -g POWERLEVEL9K_ASDF_DOTNET_CORE_BACKGROUND=139
   # typeset -g POWERLEVEL9K_ASDF_DOTNET_CORE_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # typeset -g POWERLEVEL9K_ASDF_DOTNET_CORE_SHOW_ON_UPGLOB='*.foo|*.bar'
 
@@ -698,7 +698,7 @@
 
   # Java version from asdf.
   typeset -g POWERLEVEL9K_ASDF_JAVA_FOREGROUND=131
-  typeset -g POWERLEVEL9K_ASDF_JAVA_BACKGROUND=255
+  typeset -g POWERLEVEL9K_ASDF_JAVA_BACKGROUND=254
   # typeset -g POWERLEVEL9K_ASDF_JAVA_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # typeset -g POWERLEVEL9K_ASDF_JAVA_SHOW_ON_UPGLOB='*.foo|*.bar'
 
@@ -716,7 +716,7 @@
 
   # Elixir version from asdf.
   typeset -g POWERLEVEL9K_ASDF_ELIXIR_FOREGROUND=16
-  typeset -g POWERLEVEL9K_ASDF_ELIXIR_BACKGROUND=176
+  typeset -g POWERLEVEL9K_ASDF_ELIXIR_BACKGROUND=139
   # typeset -g POWERLEVEL9K_ASDF_ELIXIR_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # typeset -g POWERLEVEL9K_ASDF_ELIXIR_SHOW_ON_UPGLOB='*.foo|*.bar'
 
@@ -728,7 +728,7 @@
 
   # PHP version from asdf.
   typeset -g POWERLEVEL9K_ASDF_PHP_FOREGROUND=16
-  typeset -g POWERLEVEL9K_ASDF_PHP_BACKGROUND=176
+  typeset -g POWERLEVEL9K_ASDF_PHP_BACKGROUND=139
   # typeset -g POWERLEVEL9K_ASDF_PHP_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # typeset -g POWERLEVEL9K_ASDF_PHP_SHOW_ON_UPGLOB='*.foo|*.bar'
 
@@ -757,14 +757,14 @@
   #################[ ranger: ranger shell (https://github.com/ranger/ranger) ]##################
   # Ranger shell color.
   typeset -g POWERLEVEL9K_RANGER_FOREGROUND=220
-  typeset -g POWERLEVEL9K_RANGER_BACKGROUND=16
+  typeset -g POWERLEVEL9K_RANGER_BACKGROUND=237
   # Custom icon.
   # typeset -g POWERLEVEL9K_RANGER_VISUAL_IDENTIFIER_EXPANSION='⭐'
   
   ####################[ yazi: yazi shell (https://github.com/sxyazi/yazi) ]#####################
   # Yazi shell color.
   typeset -g POWERLEVEL9K_YAZI_FOREGROUND=220
-  typeset -g POWERLEVEL9K_YAZI_BACKGROUND=16
+  typeset -g POWERLEVEL9K_YAZI_BACKGROUND=237
   # Custom icon.
   # typeset -g POWERLEVEL9K_YAZI_VISUAL_IDENTIFIER_EXPANSION='⭐'
   
@@ -799,7 +799,7 @@
   ######[ midnight_commander: midnight commander shell (https://midnight-commander.org/) ]######
   # Midnight Commander shell color.
   typeset -g POWERLEVEL9K_MIDNIGHT_COMMANDER_FOREGROUND=220
-  typeset -g POWERLEVEL9K_MIDNIGHT_COMMANDER_BACKGROUND=16
+  typeset -g POWERLEVEL9K_MIDNIGHT_COMMANDER_BACKGROUND=237
   # Custom icon.
   # typeset -g POWERLEVEL9K_MIDNIGHT_COMMANDER_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -827,7 +827,7 @@
   ##################################[ disk_usage: disk usage ]##################################
   # Colors for different levels of disk usage.
   typeset -g POWERLEVEL9K_DISK_USAGE_NORMAL_FOREGROUND=220
-  typeset -g POWERLEVEL9K_DISK_USAGE_NORMAL_BACKGROUND=16
+  typeset -g POWERLEVEL9K_DISK_USAGE_NORMAL_BACKGROUND=237
   typeset -g POWERLEVEL9K_DISK_USAGE_WARNING_FOREGROUND=16
   typeset -g POWERLEVEL9K_DISK_USAGE_WARNING_BACKGROUND=220
   typeset -g POWERLEVEL9K_DISK_USAGE_CRITICAL_FOREGROUND=255
@@ -950,7 +950,7 @@
   ######[ per_directory_history: Oh My Zsh per-directory-history local/global indicator ]#######
   # Color when using local/global history.
   typeset -g POWERLEVEL9K_PER_DIRECTORY_HISTORY_LOCAL_FOREGROUND=16
-  typeset -g POWERLEVEL9K_PER_DIRECTORY_HISTORY_LOCAL_BACKGROUND=176
+  typeset -g POWERLEVEL9K_PER_DIRECTORY_HISTORY_LOCAL_BACKGROUND=139
   typeset -g POWERLEVEL9K_PER_DIRECTORY_HISTORY_GLOBAL_FOREGROUND=16
   typeset -g POWERLEVEL9K_PER_DIRECTORY_HISTORY_GLOBAL_BACKGROUND=220
 
@@ -977,13 +977,13 @@
   ##################################[ context: user@hostname ]##################################
   # Context color when running with privileges.
   typeset -g POWERLEVEL9K_CONTEXT_ROOT_FOREGROUND=131
-  typeset -g POWERLEVEL9K_CONTEXT_ROOT_BACKGROUND=16
+  typeset -g POWERLEVEL9K_CONTEXT_ROOT_BACKGROUND=237
   # Context color in SSH without privileges.
   typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_FOREGROUND=220
-  typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_BACKGROUND=16
+  typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_BACKGROUND=237
   # Default context color (no privileges, no SSH).
   typeset -g POWERLEVEL9K_CONTEXT_FOREGROUND=220
-  typeset -g POWERLEVEL9K_CONTEXT_BACKGROUND=16
+  typeset -g POWERLEVEL9K_CONTEXT_BACKGROUND=237
 
   # Context format when running with privileges: user@hostname.
   typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE='%n@%m'
@@ -1093,7 +1093,7 @@
   ##########[ nodenv: node.js version from nodenv (https://github.com/nodenv/nodenv) ]##########
   # Nodenv color.
   typeset -g POWERLEVEL9K_NODENV_FOREGROUND=108
-  typeset -g POWERLEVEL9K_NODENV_BACKGROUND=16
+  typeset -g POWERLEVEL9K_NODENV_BACKGROUND=237
   # Hide node version if it doesn't come from one of these sources.
   typeset -g POWERLEVEL9K_NODENV_SOURCES=(shell local global)
   # If set to false, hide node version if it's the same as global:
@@ -1107,7 +1107,7 @@
   ##############[ nvm: node.js version from nvm (https://github.com/nvm-sh/nvm) ]###############
   # Nvm color.
   typeset -g POWERLEVEL9K_NVM_FOREGROUND=16
-  typeset -g POWERLEVEL9K_NVM_BACKGROUND=176
+  typeset -g POWERLEVEL9K_NVM_BACKGROUND=139
   # If set to false, hide node version if it's the same as default:
   # $(nvm version current) == $(nvm version default).
   typeset -g POWERLEVEL9K_NVM_PROMPT_ALWAYS_SHOW=false
@@ -1119,7 +1119,7 @@
   ############[ nodeenv: node.js environment (https://github.com/ekalinin/nodeenv) ]############
   # Nodeenv color.
   typeset -g POWERLEVEL9K_NODEENV_FOREGROUND=108
-  typeset -g POWERLEVEL9K_NODEENV_BACKGROUND=16
+  typeset -g POWERLEVEL9K_NODEENV_BACKGROUND=237
   # Don't show Node version next to the environment name.
   typeset -g POWERLEVEL9K_NODEENV_SHOW_NODE_VERSION=false
   # Separate environment name from Node version only with a space.
@@ -1157,7 +1157,7 @@
   ###############[ dotnet_version: .NET version (https://dotnet.microsoft.com) ]################
   # .NET version color.
   typeset -g POWERLEVEL9K_DOTNET_VERSION_FOREGROUND=255
-  typeset -g POWERLEVEL9K_DOTNET_VERSION_BACKGROUND=176
+  typeset -g POWERLEVEL9K_DOTNET_VERSION_BACKGROUND=139
   # Show .NET version only when in a .NET project subdirectory.
   typeset -g POWERLEVEL9K_DOTNET_VERSION_PROJECT_ONLY=true
   # Custom icon.
@@ -1166,7 +1166,7 @@
   #####################[ php_version: php version (https://www.php.net/) ]######################
   # PHP version color.
   typeset -g POWERLEVEL9K_PHP_VERSION_FOREGROUND=16
-  typeset -g POWERLEVEL9K_PHP_VERSION_BACKGROUND=176
+  typeset -g POWERLEVEL9K_PHP_VERSION_BACKGROUND=139
   # Show PHP version only when in a PHP project subdirectory.
   typeset -g POWERLEVEL9K_PHP_VERSION_PROJECT_ONLY=true
   # Custom icon.
@@ -1175,7 +1175,7 @@
   ##########[ laravel_version: laravel php framework version (https://laravel.com/) ]###########
   # Laravel version color.
   typeset -g POWERLEVEL9K_LARAVEL_VERSION_FOREGROUND=131
-  typeset -g POWERLEVEL9K_LARAVEL_VERSION_BACKGROUND=255
+  typeset -g POWERLEVEL9K_LARAVEL_VERSION_BACKGROUND=254
   # Custom icon.
   # typeset -g POWERLEVEL9K_LARAVEL_VERSION_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1196,7 +1196,7 @@
   ####################[ java_version: java version (https://www.java.com/) ]####################
   # Java version color.
   typeset -g POWERLEVEL9K_JAVA_VERSION_FOREGROUND=131
-  typeset -g POWERLEVEL9K_JAVA_VERSION_BACKGROUND=255
+  typeset -g POWERLEVEL9K_JAVA_VERSION_BACKGROUND=254
   # Show java version only when in a java project subdirectory.
   typeset -g POWERLEVEL9K_JAVA_VERSION_PROJECT_ONLY=true
   # Show brief version.
@@ -1254,7 +1254,7 @@
   ###############[ jenv: java version from jenv (https://github.com/jenv/jenv) ]################
   # Java color.
   typeset -g POWERLEVEL9K_JENV_FOREGROUND=131
-  typeset -g POWERLEVEL9K_JENV_BACKGROUND=255
+  typeset -g POWERLEVEL9K_JENV_BACKGROUND=254
   # Hide java version if it doesn't come from one of these sources.
   typeset -g POWERLEVEL9K_JENV_SOURCES=(shell local global)
   # If set to false, hide java version if it's the same as global:
@@ -1292,7 +1292,7 @@
   ############[ phpenv: php version from phpenv (https://github.com/phpenv/phpenv) ]############
   # PHP color.
   typeset -g POWERLEVEL9K_PHPENV_FOREGROUND=16
-  typeset -g POWERLEVEL9K_PHPENV_BACKGROUND=176
+  typeset -g POWERLEVEL9K_PHPENV_BACKGROUND=139
   # Hide php version if it doesn't come from one of these sources.
   typeset -g POWERLEVEL9K_PHPENV_SOURCES=(shell local global)
   # If set to false, hide php version if it's the same as global:
@@ -1365,13 +1365,13 @@
       # '*test*'  TEST    # to match your needs. Customize them as needed.
       '*'         OTHER)
   typeset -g POWERLEVEL9K_TERRAFORM_OTHER_FOREGROUND=68
-  typeset -g POWERLEVEL9K_TERRAFORM_OTHER_BACKGROUND=16
+  typeset -g POWERLEVEL9K_TERRAFORM_OTHER_BACKGROUND=237
   # typeset -g POWERLEVEL9K_TERRAFORM_OTHER_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
   #############[ terraform_version: terraform version (https://www.terraform.io) ]##############
   # Terraform version color.
   typeset -g POWERLEVEL9K_TERRAFORM_VERSION_FOREGROUND=68
-  typeset -g POWERLEVEL9K_TERRAFORM_VERSION_BACKGROUND=16
+  typeset -g POWERLEVEL9K_TERRAFORM_VERSION_BACKGROUND=237
   # Custom icon.
   # typeset -g POWERLEVEL9K_TERRAFORM_VERSION_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1384,7 +1384,7 @@
   typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY='p10k_kubecontext_lazy_prompt'
   typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_SHOW_ON_COMMAND='kubectl|helm|kubens|kubectx|oc|istioctl|kogito|k9s|helmfile|flux|fluxctl|stern|kubeseal|skaffold|kubent|kubecolor|cmctl|sparkctl'
   typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_FOREGROUND=255
-  typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_BACKGROUND=176
+  typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_BACKGROUND=139
   typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_PREFIX='at '
 
   # Show kubecontext only when the command you are typing invokes one of these tools.
@@ -1423,7 +1423,7 @@
       # '*test*'  TEST    # to match your needs. Customize them as needed.
       '*'       DEFAULT)
   typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_FOREGROUND=255
-  typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_BACKGROUND=176
+  typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_BACKGROUND=139
   # typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
   # Use POWERLEVEL9K_KUBECONTEXT_CONTENT_EXPANSION to specify the content displayed by kubecontext
@@ -1520,7 +1520,7 @@
   #[ aws_eb_env: aws elastic beanstalk environment (https://aws.amazon.com/elasticbeanstalk/) ]#
   # AWS Elastic Beanstalk environment color.
   typeset -g POWERLEVEL9K_AWS_EB_ENV_FOREGROUND=108
-  typeset -g POWERLEVEL9K_AWS_EB_ENV_BACKGROUND=16
+  typeset -g POWERLEVEL9K_AWS_EB_ENV_BACKGROUND=237
   # Custom icon.
   # typeset -g POWERLEVEL9K_AWS_EB_ENV_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1675,7 +1675,7 @@
   ###############################[ public_ip: public IP address ]###############################
   # Public IP color.
   typeset -g POWERLEVEL9K_PUBLIC_IP_FOREGROUND=255
-  typeset -g POWERLEVEL9K_PUBLIC_IP_BACKGROUND=16
+  typeset -g POWERLEVEL9K_PUBLIC_IP_BACKGROUND=237
   # Custom icon.
   # typeset -g POWERLEVEL9K_PUBLIC_IP_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1722,7 +1722,7 @@
   #########################[ proxy: system-wide http/https/ftp proxy ]##########################
   # Proxy color.
   typeset -g POWERLEVEL9K_PROXY_FOREGROUND=68
-  typeset -g POWERLEVEL9K_PROXY_BACKGROUND=16
+  typeset -g POWERLEVEL9K_PROXY_BACKGROUND=237
   # Custom icon.
   # typeset -g POWERLEVEL9K_PROXY_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1738,7 +1738,7 @@
   typeset -g POWERLEVEL9K_BATTERY_STAGES='\UF008E\UF007A\UF007B\UF007C\UF007D\UF007E\UF007F\UF0080\UF0081\UF0082\UF0079'
   # Don't show the remaining time to charge/discharge.
   typeset -g POWERLEVEL9K_BATTERY_VERBOSE=false
-  typeset -g POWERLEVEL9K_BATTERY_BACKGROUND=16
+  typeset -g POWERLEVEL9K_BATTERY_BACKGROUND=237
 
   #####################################[ wifi: wifi speed ]#####################################
   # WiFi color.
@@ -1770,7 +1770,7 @@
   ####################################[ time: current time ]####################################
   # Current time color.
   typeset -g POWERLEVEL9K_TIME_FOREGROUND=16
-  typeset -g POWERLEVEL9K_TIME_BACKGROUND=255
+  typeset -g POWERLEVEL9K_TIME_BACKGROUND=254
   # Format for the current time: 09:51:02. See `man 3 strftime`.
   typeset -g POWERLEVEL9K_TIME_FORMAT='%D{%I:%M:%S %p}'
   # If set to true, time will update when you hit enter. This way prompts for the past
