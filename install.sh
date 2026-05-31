@@ -9,15 +9,18 @@ INSTALL_PLUGINS=false
 INSTALL_OMZ=true
 INSTALL_LOCAL_BIN=true
 INSTALL_DEPS=false
+INSTALL_WSL_SCREENSHOT_CLI=false
 
 print_usage() {
-  echo "Usage: $0 [--with-deps] [--with-plugins] [--no-oh-my-zsh] [--no-local-bin]"
+  echo "Usage: $0 [--with-deps] [--with-plugins] [--with-wsl-screenshot-cli] [--no-oh-my-zsh] [--no-local-bin]"
   echo "  --with-deps:    install shell deps via the OS package manager"
   echo "                  (apt on Debian/Kali, Homebrew on macOS):"
   echo "                  zsh-syntax-highlighting, zsh-autosuggestions,"
   echo "                  command-not-found, zoxide, eza, fzf (+ powerlevel10k on brew)"
   echo "  --with-plugins: also clone Powerlevel10k and recommended plugins into \
 ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+  echo "  --with-wsl-screenshot-cli: install wsl-screenshot-cli for native-feeling"
+  echo "                  Win+Shift+S screenshot paste in WSL terminals"
   echo "  --no-oh-my-zsh: skip auto-installing Oh My Zsh if it's not present"
   echo "  --no-local-bin: skip installing managed helper scripts into ~/.local/bin"
 }
@@ -30,6 +33,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --with-deps|--install-deps)
       INSTALL_DEPS=true
+      shift
+      ;;
+    --with-wsl-screenshot-cli|--install-wsl-screenshot-cli)
+      INSTALL_WSL_SCREENSHOT_CLI=true
       shift
       ;;
     --no-oh-my-zsh|--skip-oh-my-zsh)
@@ -87,8 +94,90 @@ install_deps() {
   fi
 }
 
+download_file() {
+  local url=$1
+  local dest=$2
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL -o "$dest" "$url"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$dest" "$url"
+  else
+    echo "Error: curl or wget is required for downloads." >&2
+    return 1
+  fi
+}
+
+install_wsl_screenshot_cli() {
+  local repo="Nailuu/wsl-screenshot-cli"
+  local binary="wsl-screenshot-cli"
+  local install_dir="$HOME/.local/bin"
+  local arch version version_stripped archive base tmpdir expected actual installed_version
+
+  if ! grep -qiE "wsl|microsoft" /proc/version 2>/dev/null; then
+    echo "Not running inside WSL; skipping $binary." >&2
+    return 0
+  fi
+
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64|amd64) arch="amd64" ;;
+    aarch64|arm64) arch="arm64" ;;
+    *)
+      echo "Unsupported architecture for $binary: $arch" >&2
+      return 1
+      ;;
+  esac
+
+  version="$(
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL "https://api.github.com/repos/${repo}/releases/latest"
+    else
+      wget -qO- "https://api.github.com/repos/${repo}/releases/latest"
+    fi | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/'
+  )"
+  if [[ -z "$version" ]]; then
+    echo "Unable to resolve latest $binary release." >&2
+    return 1
+  fi
+
+  version_stripped="${version#v}"
+  if command -v "$binary" >/dev/null 2>&1; then
+    installed_version="$("$binary" --version 2>&1 | awk '{print $NF}')"
+    if [[ "$installed_version" == "$version_stripped" ]]; then
+      echo "$binary already up to date ($version)."
+      return 0
+    fi
+  fi
+
+  archive="${binary}_${version_stripped}_linux_${arch}.tar.gz"
+  base="https://github.com/${repo}/releases/download/${version}"
+  tmpdir="$(mktemp -d)"
+
+  download_file "$base/$archive" "$tmpdir/$archive"
+  download_file "$base/checksums.txt" "$tmpdir/checksums.txt"
+
+  expected="$(grep "$archive" "$tmpdir/checksums.txt" | awk '{print $1}' || true)"
+  actual="$(sha256sum "$tmpdir/$archive" | awk '{print $1}')"
+  if [[ -z "$expected" || "$expected" != "$actual" ]]; then
+    rm -rf "$tmpdir"
+    echo "Checksum verification failed for $archive." >&2
+    return 1
+  fi
+
+  tar -xzf "$tmpdir/$archive" -C "$tmpdir" "$binary"
+  mkdir -p "$install_dir"
+  install -m 0755 "$tmpdir/$binary" "$install_dir/$binary"
+  rm -rf "$tmpdir"
+  echo "Installed $binary $version to $install_dir/$binary"
+}
+
 if [[ "$INSTALL_DEPS" = true ]]; then
   install_deps
+fi
+
+if [[ "$INSTALL_WSL_SCREENSHOT_CLI" = true ]]; then
+  install_wsl_screenshot_cli
 fi
 
 if [[ ! -f "$PROJECT_DIR/zsh/.zshrc" ]]; then

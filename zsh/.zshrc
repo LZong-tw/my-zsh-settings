@@ -42,6 +42,13 @@ if [[ -d "/opt/homebrew/opt/go@1.25/bin" ]]; then
 fi
 export PATH="$HOME/.composer/vendor/bin:$HOME/.local/bin:$HOME/.antigravity/antigravity/bin:$HOME/.bun/bin:$HOME/go/bin:$PATH"
 
+# WSL screenshot paste bridge: Win+Shift+S -> paste a WSL-readable image path.
+if [[ "${WSL_SCREENSHOT_CLI_AUTOSTART:-1}" != "0" \
+      && ( -n "${WSL_DISTRO_NAME:-}" || -r /proc/sys/fs/binfmt_misc/WSLInterop ) ]] \
+      && command -v wsl-screenshot-cli >/dev/null 2>&1; then
+  { wsl-screenshot-cli start --daemon --quiet --interval "${WSL_SCREENSHOT_CLI_INTERVAL_MS:-500}" >/dev/null 2>&1 } &!
+fi
+
 # API secrets: resolve on demand via 1Password secret references.
 # Claude uses ~/.claude/settings.json apiKeyHelper, so with-secrets intentionally
 # excludes ANTHROPIC_AUTH_TOKEN to avoid leaking Claude provider state into tools.
