@@ -29,6 +29,15 @@
   # Zsh >= 5.1 is required.
   [[ $ZSH_VERSION == (5.<1->*|<6->.*) ]] || return
 
+  # Dark panel color (status / context / jobs ...). Prefer a blue-tinted truecolor
+  # (nord polar night #3B4252); the 256-color cube has no dark slate-blue. Apple
+  # Terminal.app and the Linux VT lack 24-bit color, so fall back to a neutral 256
+  # grey there. Force a value by exporting P9K_DARK_PANEL before sourcing.
+  local _p9k_dark_panel="${P9K_DARK_PANEL:-#3B4252}"
+  if [[ -z $P9K_DARK_PANEL && ( $TERM_PROGRAM == Apple_Terminal || $TERM == (linux|dumb) ) ]]; then
+    _p9k_dark_panel=237
+  fi
+
   # The list of segments shown on the left. Fill it with the most important segments.
   typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
     # =========================[ Line #1 ]=========================
@@ -524,14 +533,14 @@
   typeset -g POWERLEVEL9K_STATUS_OK=true
   typeset -g POWERLEVEL9K_STATUS_OK_VISUAL_IDENTIFIER_EXPANSION='✔'
   typeset -g POWERLEVEL9K_STATUS_OK_FOREGROUND=108
-  typeset -g POWERLEVEL9K_STATUS_OK_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_STATUS_OK_BACKGROUND=$_p9k_dark_panel
 
   # Status when some part of a pipe command fails but the overall exit status is zero. It may look
   # like this: 1|0.
   typeset -g POWERLEVEL9K_STATUS_OK_PIPE=true
   typeset -g POWERLEVEL9K_STATUS_OK_PIPE_VISUAL_IDENTIFIER_EXPANSION='✔'
   typeset -g POWERLEVEL9K_STATUS_OK_PIPE_FOREGROUND=108
-  typeset -g POWERLEVEL9K_STATUS_OK_PIPE_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_STATUS_OK_PIPE_BACKGROUND=$_p9k_dark_panel
 
   # Status when it's just an error code (e.g., '1'). No need to show it if prompt_char is enabled as
   # it will signify error by turning red.
@@ -573,7 +582,7 @@
   #######################[ background_jobs: presence of background jobs ]#######################
   # Background jobs color.
   typeset -g POWERLEVEL9K_BACKGROUND_JOBS_FOREGROUND=110
-  typeset -g POWERLEVEL9K_BACKGROUND_JOBS_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_BACKGROUND_JOBS_BACKGROUND=$_p9k_dark_panel
   # Don't show the number of background jobs.
   typeset -g POWERLEVEL9K_BACKGROUND_JOBS_VERBOSE=false
   # Custom icon.
@@ -582,7 +591,7 @@
   #######################[ direnv: direnv status (https://direnv.net/) ]########################
   # Direnv color.
   typeset -g POWERLEVEL9K_DIRENV_FOREGROUND=220
-  typeset -g POWERLEVEL9K_DIRENV_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_DIRENV_BACKGROUND=$_p9k_dark_panel
   # Custom icon.
   # typeset -g POWERLEVEL9K_DIRENV_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -757,14 +766,14 @@
   #################[ ranger: ranger shell (https://github.com/ranger/ranger) ]##################
   # Ranger shell color.
   typeset -g POWERLEVEL9K_RANGER_FOREGROUND=220
-  typeset -g POWERLEVEL9K_RANGER_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_RANGER_BACKGROUND=$_p9k_dark_panel
   # Custom icon.
   # typeset -g POWERLEVEL9K_RANGER_VISUAL_IDENTIFIER_EXPANSION='⭐'
   
   ####################[ yazi: yazi shell (https://github.com/sxyazi/yazi) ]#####################
   # Yazi shell color.
   typeset -g POWERLEVEL9K_YAZI_FOREGROUND=220
-  typeset -g POWERLEVEL9K_YAZI_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_YAZI_BACKGROUND=$_p9k_dark_panel
   # Custom icon.
   # typeset -g POWERLEVEL9K_YAZI_VISUAL_IDENTIFIER_EXPANSION='⭐'
   
@@ -799,7 +808,7 @@
   ######[ midnight_commander: midnight commander shell (https://midnight-commander.org/) ]######
   # Midnight Commander shell color.
   typeset -g POWERLEVEL9K_MIDNIGHT_COMMANDER_FOREGROUND=220
-  typeset -g POWERLEVEL9K_MIDNIGHT_COMMANDER_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_MIDNIGHT_COMMANDER_BACKGROUND=$_p9k_dark_panel
   # Custom icon.
   # typeset -g POWERLEVEL9K_MIDNIGHT_COMMANDER_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -827,7 +836,7 @@
   ##################################[ disk_usage: disk usage ]##################################
   # Colors for different levels of disk usage.
   typeset -g POWERLEVEL9K_DISK_USAGE_NORMAL_FOREGROUND=220
-  typeset -g POWERLEVEL9K_DISK_USAGE_NORMAL_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_DISK_USAGE_NORMAL_BACKGROUND=$_p9k_dark_panel
   typeset -g POWERLEVEL9K_DISK_USAGE_WARNING_FOREGROUND=16
   typeset -g POWERLEVEL9K_DISK_USAGE_WARNING_BACKGROUND=220
   typeset -g POWERLEVEL9K_DISK_USAGE_CRITICAL_FOREGROUND=255
@@ -977,13 +986,13 @@
   ##################################[ context: user@hostname ]##################################
   # Context color when running with privileges.
   typeset -g POWERLEVEL9K_CONTEXT_ROOT_FOREGROUND=131
-  typeset -g POWERLEVEL9K_CONTEXT_ROOT_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_CONTEXT_ROOT_BACKGROUND=$_p9k_dark_panel
   # Context color in SSH without privileges.
   typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_FOREGROUND=220
-  typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_BACKGROUND=$_p9k_dark_panel
   # Default context color (no privileges, no SSH).
   typeset -g POWERLEVEL9K_CONTEXT_FOREGROUND=220
-  typeset -g POWERLEVEL9K_CONTEXT_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_CONTEXT_BACKGROUND=$_p9k_dark_panel
 
   # Context format when running with privileges: user@hostname.
   typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE='%n@%m'
@@ -1093,7 +1102,7 @@
   ##########[ nodenv: node.js version from nodenv (https://github.com/nodenv/nodenv) ]##########
   # Nodenv color.
   typeset -g POWERLEVEL9K_NODENV_FOREGROUND=108
-  typeset -g POWERLEVEL9K_NODENV_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_NODENV_BACKGROUND=$_p9k_dark_panel
   # Hide node version if it doesn't come from one of these sources.
   typeset -g POWERLEVEL9K_NODENV_SOURCES=(shell local global)
   # If set to false, hide node version if it's the same as global:
@@ -1119,7 +1128,7 @@
   ############[ nodeenv: node.js environment (https://github.com/ekalinin/nodeenv) ]############
   # Nodeenv color.
   typeset -g POWERLEVEL9K_NODEENV_FOREGROUND=108
-  typeset -g POWERLEVEL9K_NODEENV_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_NODEENV_BACKGROUND=$_p9k_dark_panel
   # Don't show Node version next to the environment name.
   typeset -g POWERLEVEL9K_NODEENV_SHOW_NODE_VERSION=false
   # Separate environment name from Node version only with a space.
@@ -1365,13 +1374,13 @@
       # '*test*'  TEST    # to match your needs. Customize them as needed.
       '*'         OTHER)
   typeset -g POWERLEVEL9K_TERRAFORM_OTHER_FOREGROUND=68
-  typeset -g POWERLEVEL9K_TERRAFORM_OTHER_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_TERRAFORM_OTHER_BACKGROUND=$_p9k_dark_panel
   # typeset -g POWERLEVEL9K_TERRAFORM_OTHER_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
   #############[ terraform_version: terraform version (https://www.terraform.io) ]##############
   # Terraform version color.
   typeset -g POWERLEVEL9K_TERRAFORM_VERSION_FOREGROUND=68
-  typeset -g POWERLEVEL9K_TERRAFORM_VERSION_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_TERRAFORM_VERSION_BACKGROUND=$_p9k_dark_panel
   # Custom icon.
   # typeset -g POWERLEVEL9K_TERRAFORM_VERSION_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1520,7 +1529,7 @@
   #[ aws_eb_env: aws elastic beanstalk environment (https://aws.amazon.com/elasticbeanstalk/) ]#
   # AWS Elastic Beanstalk environment color.
   typeset -g POWERLEVEL9K_AWS_EB_ENV_FOREGROUND=108
-  typeset -g POWERLEVEL9K_AWS_EB_ENV_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_AWS_EB_ENV_BACKGROUND=$_p9k_dark_panel
   # Custom icon.
   # typeset -g POWERLEVEL9K_AWS_EB_ENV_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1675,7 +1684,7 @@
   ###############################[ public_ip: public IP address ]###############################
   # Public IP color.
   typeset -g POWERLEVEL9K_PUBLIC_IP_FOREGROUND=255
-  typeset -g POWERLEVEL9K_PUBLIC_IP_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_PUBLIC_IP_BACKGROUND=$_p9k_dark_panel
   # Custom icon.
   # typeset -g POWERLEVEL9K_PUBLIC_IP_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1722,7 +1731,7 @@
   #########################[ proxy: system-wide http/https/ftp proxy ]##########################
   # Proxy color.
   typeset -g POWERLEVEL9K_PROXY_FOREGROUND=68
-  typeset -g POWERLEVEL9K_PROXY_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_PROXY_BACKGROUND=$_p9k_dark_panel
   # Custom icon.
   # typeset -g POWERLEVEL9K_PROXY_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1738,7 +1747,7 @@
   typeset -g POWERLEVEL9K_BATTERY_STAGES='\UF008E\UF007A\UF007B\UF007C\UF007D\UF007E\UF007F\UF0080\UF0081\UF0082\UF0079'
   # Don't show the remaining time to charge/discharge.
   typeset -g POWERLEVEL9K_BATTERY_VERBOSE=false
-  typeset -g POWERLEVEL9K_BATTERY_BACKGROUND='#3B4252'
+  typeset -g POWERLEVEL9K_BATTERY_BACKGROUND=$_p9k_dark_panel
 
   #####################################[ wifi: wifi speed ]#####################################
   # WiFi color.

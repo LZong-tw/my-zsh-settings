@@ -71,9 +71,15 @@ The p10k prompt palette is tuned to match the
 | blue   | `68`  | light text | `255` / panels `254` |
 | green  | `108` | grey/frame | `240`/`244` |
 
-The only exception is the dark panels (status / context / jobs), set to
-`'#3B4252'` (nord polar night) — the 256-color cube has no dark slate-blue, so a
-quoted truecolor hex is used to give them a blue tint.
+The only exception is the dark panels (status / context / jobs). They want a
+blue-tinted dark that the 256-color cube cannot represent (it jumps from neutral
+grey to saturated navy), so they use the truecolor `#3B4252` (nord polar night)
+via a `$_p9k_dark_panel` variable set near the top of the config. Because
+**Apple Terminal.app and the Linux VT have no 24-bit color**, that variable falls
+back to the 256 grey `237` when `$TERM_PROGRAM == Apple_Terminal` or
+`$TERM == linux`, so the prompt is portable across macOS Terminal, iTerm2,
+Windows Terminal and the Linux console. Force a specific value (truecolor or
+index) by exporting `P9K_DARK_PANEL` before the prompt loads.
 
 Two hard-won gotchas if you ever re-theme it:
 
