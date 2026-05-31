@@ -160,7 +160,7 @@
   if [[ $POWERLEVEL9K_MULTILINE_FIRST_PROMPT_GAP_CHAR != ' ' ]]; then
     # The color of the filler. You'll probably want to match the color of POWERLEVEL9K_MULTILINE
     # ornaments defined above.
-    typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_GAP_FOREGROUND=#4C566A
+    typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_GAP_FOREGROUND=244
     # Start filler from the edge of the screen if there are no left segments on the first line.
     typeset -g POWERLEVEL9K_EMPTY_LINE_LEFT_PROMPT_FIRST_SEGMENT_END_SYMBOL='%{%}'
     # End filler on the edge of the screen if there are no right segments on the first line.
@@ -192,7 +192,7 @@
   #################################[ os_icon: os identifier ]##################################
   # OS identifier color.
   typeset -g POWERLEVEL9K_OS_ICON_FOREGROUND=16
-  typeset -g POWERLEVEL9K_OS_ICON_BACKGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_OS_ICON_BACKGROUND=255
   # Custom icon.
   # typeset -g POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='⭐'
 
@@ -223,17 +223,17 @@
   # Current directory background color.
   typeset -g POWERLEVEL9K_DIR_BACKGROUND=68
   # Default current directory foreground color.
-  typeset -g POWERLEVEL9K_DIR_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_DIR_FOREGROUND=255
   # If directory is too long, shorten some of its segments to the shortest possible unique
   # prefix. The shortened directory can be tab-completed to the original.
   typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_to_unique
   # Replace removed segment suffixes with this symbol.
   typeset -g POWERLEVEL9K_SHORTEN_DELIMITER=
   # Color of the shortened directory segments.
-  typeset -g POWERLEVEL9K_DIR_SHORTENED_FOREGROUND=#D8DEE9
+  typeset -g POWERLEVEL9K_DIR_SHORTENED_FOREGROUND=252
   # Color of the anchor directory segments. Anchor segments are never shortened. The first
   # segment is always an anchor.
-  typeset -g POWERLEVEL9K_DIR_ANCHOR_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_DIR_ANCHOR_FOREGROUND=255
   # Display anchor directory segments in bold.
   typeset -g POWERLEVEL9K_DIR_ANCHOR_BOLD=true
   # Don't shorten directories that contain any of these files. They are anchors.
@@ -365,7 +365,7 @@
   typeset -g POWERLEVEL9K_VCS_MODIFIED_BACKGROUND=220
   typeset -g POWERLEVEL9K_VCS_UNTRACKED_BACKGROUND=108
   typeset -g POWERLEVEL9K_VCS_CONFLICTED_BACKGROUND=220
-  typeset -g POWERLEVEL9K_VCS_LOADING_BACKGROUND=#434C5E
+  typeset -g POWERLEVEL9K_VCS_LOADING_BACKGROUND=240
 
   # Branch icon. Set this parameter to '\UE0A0 ' for the popular Powerline branch icon.
   typeset -g POWERLEVEL9K_VCS_BRANCH_ICON='\uF126 '
@@ -572,7 +572,7 @@
 
   #######################[ background_jobs: presence of background jobs ]#######################
   # Background jobs color.
-  typeset -g POWERLEVEL9K_BACKGROUND_JOBS_FOREGROUND=#88C0D0
+  typeset -g POWERLEVEL9K_BACKGROUND_JOBS_FOREGROUND=110
   typeset -g POWERLEVEL9K_BACKGROUND_JOBS_BACKGROUND=16
   # Don't show the number of background jobs.
   typeset -g POWERLEVEL9K_BACKGROUND_JOBS_VERBOSE=false
@@ -591,7 +591,7 @@
   # Tip:  Override these parameters for ${TOOL} with POWERLEVEL9K_ASDF_${TOOL}_FOREGROUND and
   # POWERLEVEL9K_ASDF_${TOOL}_BACKGROUND.
   typeset -g POWERLEVEL9K_ASDF_FOREGROUND=16
-  typeset -g POWERLEVEL9K_ASDF_BACKGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_ASDF_BACKGROUND=255
 
   # There are four parameters that can be used to hide asdf tools. Each parameter describes
   # conditions under which a tool gets hidden. Parameters can hide tools but not unhide them. If at
@@ -674,7 +674,7 @@
 
   # Rust version from asdf.
   typeset -g POWERLEVEL9K_ASDF_RUST_FOREGROUND=16
-  typeset -g POWERLEVEL9K_ASDF_RUST_BACKGROUND=#D08770
+  typeset -g POWERLEVEL9K_ASDF_RUST_BACKGROUND=173
   # typeset -g POWERLEVEL9K_ASDF_RUST_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # typeset -g POWERLEVEL9K_ASDF_RUST_SHOW_ON_UPGLOB='*.foo|*.bar'
 
@@ -698,7 +698,7 @@
 
   # Java version from asdf.
   typeset -g POWERLEVEL9K_ASDF_JAVA_FOREGROUND=131
-  typeset -g POWERLEVEL9K_ASDF_JAVA_BACKGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_ASDF_JAVA_BACKGROUND=255
   # typeset -g POWERLEVEL9K_ASDF_JAVA_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # typeset -g POWERLEVEL9K_ASDF_JAVA_SHOW_ON_UPGLOB='*.foo|*.bar'
 
@@ -722,7 +722,7 @@
 
   # Postgres version from asdf.
   typeset -g POWERLEVEL9K_ASDF_POSTGRES_FOREGROUND=16
-  typeset -g POWERLEVEL9K_ASDF_POSTGRES_BACKGROUND=#88C0D0
+  typeset -g POWERLEVEL9K_ASDF_POSTGRES_BACKGROUND=110
   # typeset -g POWERLEVEL9K_ASDF_POSTGRES_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # typeset -g POWERLEVEL9K_ASDF_POSTGRES_SHOW_ON_UPGLOB='*.foo|*.bar'
 
@@ -746,7 +746,7 @@
 
   ##########[ nordvpn: nordvpn connection status, linux only (https://nordvpn.com/) ]###########
   # NordVPN connection indicator color.
-  typeset -g POWERLEVEL9K_NORDVPN_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_NORDVPN_FOREGROUND=255
   typeset -g POWERLEVEL9K_NORDVPN_BACKGROUND=68
   # Hide NordVPN connection indicator when not connected.
   typeset -g POWERLEVEL9K_NORDVPN_{DISCONNECTED,CONNECTING,DISCONNECTING}_CONTENT_EXPANSION=
@@ -771,21 +771,21 @@
   ######################[ nnn: nnn shell (https://github.com/jarun/nnn) ]#######################
   # Nnn shell color.
   typeset -g POWERLEVEL9K_NNN_FOREGROUND=16
-  typeset -g POWERLEVEL9K_NNN_BACKGROUND=#88C0D0
+  typeset -g POWERLEVEL9K_NNN_BACKGROUND=110
   # Custom icon.
   # typeset -g POWERLEVEL9K_NNN_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
   ######################[ lf: lf shell (https://github.com/gokcehan/lf) ]#######################
   # lf shell color.
   typeset -g POWERLEVEL9K_LF_FOREGROUND=16
-  typeset -g POWERLEVEL9K_LF_BACKGROUND=#88C0D0
+  typeset -g POWERLEVEL9K_LF_BACKGROUND=110
   # Custom icon.
   # typeset -g POWERLEVEL9K_LF_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
   ##################[ xplr: xplr shell (https://github.com/sayanarijit/xplr) ]##################
   # xplr shell color.
   typeset -g POWERLEVEL9K_XPLR_FOREGROUND=16
-  typeset -g POWERLEVEL9K_XPLR_BACKGROUND=#88C0D0
+  typeset -g POWERLEVEL9K_XPLR_BACKGROUND=110
   # Custom icon.
   # typeset -g POWERLEVEL9K_XPLR_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -830,7 +830,7 @@
   typeset -g POWERLEVEL9K_DISK_USAGE_NORMAL_BACKGROUND=16
   typeset -g POWERLEVEL9K_DISK_USAGE_WARNING_FOREGROUND=16
   typeset -g POWERLEVEL9K_DISK_USAGE_WARNING_BACKGROUND=220
-  typeset -g POWERLEVEL9K_DISK_USAGE_CRITICAL_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_DISK_USAGE_CRITICAL_FOREGROUND=255
   typeset -g POWERLEVEL9K_DISK_USAGE_CRITICAL_BACKGROUND=131
   # Thresholds for different levels of disk usage (percentage points).
   typeset -g POWERLEVEL9K_DISK_USAGE_WARNING_LEVEL=90
@@ -854,7 +854,7 @@
   typeset -g POWERLEVEL9K_VI_MODE_OVERWRITE_BACKGROUND=220
   # Text and color for insert vi mode.
   typeset -g POWERLEVEL9K_VI_INSERT_MODE_STRING=
-  typeset -g POWERLEVEL9K_VI_MODE_INSERT_FOREGROUND=#434C5E
+  typeset -g POWERLEVEL9K_VI_MODE_INSERT_FOREGROUND=240
   # Custom icon.
   # typeset -g POWERLEVEL9K_VI_MODE_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -890,7 +890,7 @@
   ################[ todo: todo items (https://github.com/todotxt/todo.txt-cli) ]################
   # Todo color.
   typeset -g POWERLEVEL9K_TODO_FOREGROUND=16
-  typeset -g POWERLEVEL9K_TODO_BACKGROUND=#434C5E
+  typeset -g POWERLEVEL9K_TODO_BACKGROUND=240
   # Hide todo when the total number of tasks is zero.
   typeset -g POWERLEVEL9K_TODO_HIDE_ZERO_TOTAL=true
   # Hide todo when the number of tasks after filtering is zero.
@@ -914,8 +914,8 @@
 
   ###########[ timewarrior: timewarrior tracking status (https://timewarrior.net/) ]############
   # Timewarrior color.
-  typeset -g POWERLEVEL9K_TIMEWARRIOR_FOREGROUND=#ECEFF4
-  typeset -g POWERLEVEL9K_TIMEWARRIOR_BACKGROUND=#434C5E
+  typeset -g POWERLEVEL9K_TIMEWARRIOR_FOREGROUND=255
+  typeset -g POWERLEVEL9K_TIMEWARRIOR_BACKGROUND=240
 
   # If the tracked task is longer than 24 characters, truncate and append "…".
   # Tip: To always display tasks without truncation, delete the following parameter.
@@ -929,7 +929,7 @@
   ##############[ taskwarrior: taskwarrior task count (https://taskwarrior.org/) ]##############
   # Taskwarrior color.
   typeset -g POWERLEVEL9K_TASKWARRIOR_FOREGROUND=16
-  typeset -g POWERLEVEL9K_TASKWARRIOR_BACKGROUND=#88C0D0
+  typeset -g POWERLEVEL9K_TASKWARRIOR_BACKGROUND=110
 
   # Taskwarrior segment format. The following parameters are available within the expansion.
   #
@@ -1129,7 +1129,7 @@
 
   ##############################[ node_version: node.js version ]###############################
   # Node version color.
-  typeset -g POWERLEVEL9K_NODE_VERSION_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_NODE_VERSION_FOREGROUND=255
   typeset -g POWERLEVEL9K_NODE_VERSION_BACKGROUND=108
   # Show node version only when in a directory tree containing package.json.
   typeset -g POWERLEVEL9K_NODE_VERSION_PROJECT_ONLY=true
@@ -1138,7 +1138,7 @@
 
   #######################[ go_version: go version (https://golang.org) ]########################
   # Go version color.
-  typeset -g POWERLEVEL9K_GO_VERSION_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_GO_VERSION_FOREGROUND=255
   typeset -g POWERLEVEL9K_GO_VERSION_BACKGROUND=108
   # Show go version only when in a go project subdirectory.
   typeset -g POWERLEVEL9K_GO_VERSION_PROJECT_ONLY=true
@@ -1148,7 +1148,7 @@
   #################[ rust_version: rustc version (https://www.rust-lang.org) ]##################
   # Rust version color.
   typeset -g POWERLEVEL9K_RUST_VERSION_FOREGROUND=16
-  typeset -g POWERLEVEL9K_RUST_VERSION_BACKGROUND=#D08770
+  typeset -g POWERLEVEL9K_RUST_VERSION_BACKGROUND=173
   # Show rust version only when in a rust project subdirectory.
   typeset -g POWERLEVEL9K_RUST_VERSION_PROJECT_ONLY=true
   # Custom icon.
@@ -1156,7 +1156,7 @@
 
   ###############[ dotnet_version: .NET version (https://dotnet.microsoft.com) ]################
   # .NET version color.
-  typeset -g POWERLEVEL9K_DOTNET_VERSION_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_DOTNET_VERSION_FOREGROUND=255
   typeset -g POWERLEVEL9K_DOTNET_VERSION_BACKGROUND=176
   # Show .NET version only when in a .NET project subdirectory.
   typeset -g POWERLEVEL9K_DOTNET_VERSION_PROJECT_ONLY=true
@@ -1175,7 +1175,7 @@
   ##########[ laravel_version: laravel php framework version (https://laravel.com/) ]###########
   # Laravel version color.
   typeset -g POWERLEVEL9K_LARAVEL_VERSION_FOREGROUND=131
-  typeset -g POWERLEVEL9K_LARAVEL_VERSION_BACKGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_LARAVEL_VERSION_BACKGROUND=255
   # Custom icon.
   # typeset -g POWERLEVEL9K_LARAVEL_VERSION_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1196,7 +1196,7 @@
   ####################[ java_version: java version (https://www.java.com/) ]####################
   # Java version color.
   typeset -g POWERLEVEL9K_JAVA_VERSION_FOREGROUND=131
-  typeset -g POWERLEVEL9K_JAVA_VERSION_BACKGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_JAVA_VERSION_BACKGROUND=255
   # Show java version only when in a java project subdirectory.
   typeset -g POWERLEVEL9K_JAVA_VERSION_PROJECT_ONLY=true
   # Show brief version.
@@ -1207,7 +1207,7 @@
   ###[ package: name@version from package.json (https://docs.npmjs.com/files/package.json) ]####
   # Package color.
   typeset -g POWERLEVEL9K_PACKAGE_FOREGROUND=16
-  typeset -g POWERLEVEL9K_PACKAGE_BACKGROUND=#88C0D0
+  typeset -g POWERLEVEL9K_PACKAGE_BACKGROUND=110
 
   # Package format. The following parameters are available within the expansion.
   #
@@ -1222,7 +1222,7 @@
   #######################[ rvm: ruby version from rvm (https://rvm.io) ]########################
   # Rvm color.
   typeset -g POWERLEVEL9K_RVM_FOREGROUND=16
-  typeset -g POWERLEVEL9K_RVM_BACKGROUND=#4C566A
+  typeset -g POWERLEVEL9K_RVM_BACKGROUND=244
   # Don't show @gemset at the end.
   typeset -g POWERLEVEL9K_RVM_SHOW_GEMSET=false
   # Don't show ruby- at the front.
@@ -1254,7 +1254,7 @@
   ###############[ jenv: java version from jenv (https://github.com/jenv/jenv) ]################
   # Java color.
   typeset -g POWERLEVEL9K_JENV_FOREGROUND=131
-  typeset -g POWERLEVEL9K_JENV_BACKGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_JENV_BACKGROUND=255
   # Hide java version if it doesn't come from one of these sources.
   typeset -g POWERLEVEL9K_JENV_SOURCES=(shell local global)
   # If set to false, hide java version if it's the same as global:
@@ -1383,7 +1383,7 @@
   # segment cheap by reading a cache that gets refreshed after kubectl/kubectx/kubens commands.
   typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY='p10k_kubecontext_lazy_prompt'
   typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_SHOW_ON_COMMAND='kubectl|helm|kubens|kubectx|oc|istioctl|kogito|k9s|helmfile|flux|fluxctl|stern|kubeseal|skaffold|kubent|kubecolor|cmctl|sparkctl'
-  typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_FOREGROUND=255
   typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_BACKGROUND=176
   typeset -g POWERLEVEL9K_CUSTOM_KUBECONTEXT_LAZY_PREFIX='at '
 
@@ -1422,7 +1422,7 @@
       # '*prod*'  PROD    # These values are examples that are unlikely
       # '*test*'  TEST    # to match your needs. Customize them as needed.
       '*'       DEFAULT)
-  typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_FOREGROUND=255
   typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_BACKGROUND=176
   # typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1507,7 +1507,7 @@
       # '*prod*'  PROD    # These values are examples that are unlikely
       # '*test*'  TEST    # to match your needs. Customize them as needed.
       '*'       DEFAULT)
-  typeset -g POWERLEVEL9K_AWS_DEFAULT_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_AWS_DEFAULT_FOREGROUND=255
   typeset -g POWERLEVEL9K_AWS_DEFAULT_BACKGROUND=131
   # typeset -g POWERLEVEL9K_AWS_DEFAULT_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1559,7 +1559,7 @@
       '*'         OTHER)
 
   # Azure account name color.
-  typeset -g POWERLEVEL9K_AZURE_OTHER_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_AZURE_OTHER_FOREGROUND=255
   typeset -g POWERLEVEL9K_AZURE_OTHER_BACKGROUND=68
   # Custom icon.
   # typeset -g POWERLEVEL9K_AZURE_OTHER_VISUAL_IDENTIFIER_EXPANSION='⭐'
@@ -1569,7 +1569,7 @@
   # Tip: Remove the next line to always show gcloud.
   typeset -g POWERLEVEL9K_GCLOUD_SHOW_ON_COMMAND='gcloud|gcs|gsutil'
   # Google cloud color.
-  typeset -g POWERLEVEL9K_GCLOUD_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_GCLOUD_FOREGROUND=255
   typeset -g POWERLEVEL9K_GCLOUD_BACKGROUND=68
 
   # Google cloud format. Change the value of POWERLEVEL9K_GCLOUD_PARTIAL_CONTENT_EXPANSION and/or
@@ -1641,7 +1641,7 @@
       # '*:*prod*:*'  PROD    # These values are examples that are unlikely
       # '*:*test*:*'  TEST    # to match your needs. Customize them as needed.
       '*'             DEFAULT)
-  typeset -g POWERLEVEL9K_GOOGLE_APP_CRED_DEFAULT_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_GOOGLE_APP_CRED_DEFAULT_FOREGROUND=255
   typeset -g POWERLEVEL9K_GOOGLE_APP_CRED_DEFAULT_BACKGROUND=68
   # typeset -g POWERLEVEL9K_GOOGLE_APP_CRED_DEFAULT_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1674,7 +1674,7 @@
 
   ###############################[ public_ip: public IP address ]###############################
   # Public IP color.
-  typeset -g POWERLEVEL9K_PUBLIC_IP_FOREGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_PUBLIC_IP_FOREGROUND=255
   typeset -g POWERLEVEL9K_PUBLIC_IP_BACKGROUND=16
   # Custom icon.
   # typeset -g POWERLEVEL9K_PUBLIC_IP_VISUAL_IDENTIFIER_EXPANSION='⭐'
@@ -1682,7 +1682,7 @@
   ########################[ vpn_ip: virtual private network indicator ]#########################
   # VPN IP color.
   typeset -g POWERLEVEL9K_VPN_IP_FOREGROUND=16
-  typeset -g POWERLEVEL9K_VPN_IP_BACKGROUND=#88C0D0
+  typeset -g POWERLEVEL9K_VPN_IP_BACKGROUND=110
   # When on VPN, show just an icon without the IP address.
   # Tip: To display the private IP address when on VPN, remove the next line.
   typeset -g POWERLEVEL9K_VPN_IP_CONTENT_EXPANSION=
@@ -1770,7 +1770,7 @@
   ####################################[ time: current time ]####################################
   # Current time color.
   typeset -g POWERLEVEL9K_TIME_FOREGROUND=16
-  typeset -g POWERLEVEL9K_TIME_BACKGROUND=#ECEFF4
+  typeset -g POWERLEVEL9K_TIME_BACKGROUND=255
   # Format for the current time: 09:51:02. See `man 3 strftime`.
   typeset -g POWERLEVEL9K_TIME_FORMAT='%D{%I:%M:%S %p}'
   # If set to true, time will update when you hit enter. This way prompts for the past
