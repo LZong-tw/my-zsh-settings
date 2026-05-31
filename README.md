@@ -58,28 +58,36 @@ is **not** found, `.zshrc` falls back to Kali's native two-line `㉿` prompt,
 including the `Ctrl+P` one-line/two-line toggle and the blank-line-before-prompt
 behaviour. Either way you keep a usable, Kali-flavored prompt.
 
-### Prompt colors: use ansi256 indices, never `#hex`
+### Prompt colors: prefer ansi256 indices; quote any hex
 The p10k prompt palette is tuned to match the
 [ccstatusline](https://github.com/sirmalloc/ccstatusline) `nord-aurora` theme at
-`colorLevel 2`, so every `*_FOREGROUND`/`*_BACKGROUND` value in `zsh/.p10k.zsh`
-is an **ansi256 index**, not a hex string. The mapping is:
+`colorLevel 2`, so almost every `*_FOREGROUND`/`*_BACKGROUND` value in
+`zsh/.p10k.zsh` is an **ansi256 index**. The mapping is:
 
 | role | index | role | index |
 |------|-------|------|-------|
-| red    | `131` | magenta | `176` |
+| red    | `131` | magenta | `139` (softened from `176`) |
 | yellow | `220` | dark text | `16`  |
-| blue   | `68`  | light text | `255` |
+| blue   | `68`  | light text | `255` / panels `254` |
 | green  | `108` | grey/frame | `240`/`244` |
+
+The only exception is the dark panels (status / context / jobs), set to
+`'#3B4252'` (nord polar night) — the 256-color cube has no dark slate-blue, so a
+quoted truecolor hex is used to give them a blue tint.
 
 Two hard-won gotchas if you ever re-theme it:
 
-- **Do not use `#rrggbb` hex values in `.p10k.zsh`.** Under `setopt extended_glob`
-  (which the prompt enables) `#` is a glob operator. On a brace-expansion line such
-  as `POWERLEVEL9K_PROMPT_CHAR_OK_{VIINS,VICMD,...}_FOREGROUND=#A3BE8C`, zsh tries
-  to glob the `#…` and aborts startup with `no matches found`. Indices in the
-  16–255 range are also scheme-independent (unlike `0–15`), so they render the
-  same regardless of the terminal's 16-color scheme. Hex is fine in the
-  oh-my-posh JSON theme (it is JSON, not zsh) — only `.p10k.zsh` is affected.
+- **Never use *unquoted* `#rrggbb` hex in `.p10k.zsh`.** Under `setopt
+  extended_glob` (which the prompt enables) `#` is a glob operator. On a
+  brace-expansion line such as
+  `POWERLEVEL9K_PROMPT_CHAR_OK_{VIINS,VICMD,...}_FOREGROUND=#A3BE8C`, zsh tries to
+  glob the `#…` and aborts startup with `no matches found`. **Single-quoting the
+  value (`='#3B4252'`) protects the `#`** and is safe everywhere, even on
+  brace-expansion lines — that is how the dark panels use truecolor. ansi256
+  indices in the 16–255 range are also scheme-independent (unlike `0–15`), so they
+  render the same regardless of the terminal's 16-color scheme; prefer them unless
+  you specifically need a truecolor the cube can't hit. (Hex is unconditionally
+  fine in the oh-my-posh JSON theme — that is JSON, not zsh.)
 - **`zsh -n` is not enough to verify a color change.** It is a syntax check and
   will not catch the runtime glob error above. Always actually source the file:
   `zsh -c 'setopt extended_glob nomatch; source ~/.p10k.zsh && echo OK'`.
