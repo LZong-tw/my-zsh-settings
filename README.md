@@ -52,6 +52,17 @@ Debian/Kali `/usr/share/*` packages → Homebrew (`/opt/homebrew` and
 `/usr/local`). A machine without oh-my-zsh uses its distro/Homebrew packages
 instead of erroring on startup.
 
+### zoxide: frecency completion on a bare Tab
+zoxide's stock zsh completion makes a plain `z foo<TAB>` complete *local*
+directories, reserving frecency-ranked matches for `z foo <SPACE><TAB>` (and
+only when fzf is installed). Its PowerShell completion, by contrast, lists
+frecency matches on a bare Tab. `.zshrc` overrides the zsh side to match that
+PowerShell behaviour: `z foo<TAB>` lists frecency-ranked directories directly,
+cycled with `Tab`/`Shift+Tab` and selectable with the arrow keys (the repo
+already sets `menu select`). The override is registered right after
+`zoxide init` so it wins over zoxide's own completion, and is a no-op when
+zoxide is not installed.
+
 ### Prompt: p10k with a Kali fallback
 When Powerlevel10k is available it owns the prompt (via `zsh/.p10k.zsh`). When it
 is **not** found, `.zshrc` falls back to Kali's native two-line `㉿` prompt,

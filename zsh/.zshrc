@@ -371,7 +371,21 @@ if _zsh_source_first \
 fi
 
 # zoxide (smart cd) — only when the binary is installed
-(( $+commands[zoxide] )) && source <(command zoxide init zsh)
+if (( $+commands[zoxide] )); then
+  source <(command zoxide init zsh)
+  # Windows/PowerShell parity: zoxide's stock zsh completion makes a bare
+  # `z foo<TAB>` complete local directories and reserves frecency matches for
+  # `z foo <SPACE><TAB>` (only with fzf). Override it so a plain Tab lists
+  # frecency-ranked directories directly, the way the PowerShell completion does.
+  _zoxide_frecency_complete() {
+    local -a matches
+    matches=("${(@f)$(command zoxide query --list --exclude "${PWD}" -- ${words[2,CURRENT]} 2>/dev/null)}")
+    (( ${#matches} )) || return 1
+    compstate[insert]='menu'   # cycle the full paths; skip common-prefix collapse
+    compadd -U -Q -- "${matches[@]}"
+  }
+  (( $+functions[compdef] )) && compdef _zoxide_frecency_complete z
+fi
 
 # oh-my-zsh helper plugins (optional; present only when oh-my-zsh is installed)
 _zsh_source_first "$_omz/plugins/extract/extract.plugin.zsh"
