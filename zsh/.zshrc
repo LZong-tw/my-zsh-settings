@@ -941,15 +941,16 @@ _ccr_health() {
 }
 
 _ccr_running() {
-    command ccr status >/dev/null 2>&1 || _ccr_health
+    _ccr_health && return 0
+    command ccr status 2>/dev/null | command grep -q "Status: Running"
 }
 
 ccr-start() {
-    local _bin _op_bin _token_ref
+    local _bin _op_bin _token_ref _token
     _bin=$(whence -p ccr) || { echo "ccr not found" >&2; return 127; }
 
     if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" && "$ANTHROPIC_AUTH_TOKEN" != op://* ]]; then
-        "$_bin" start "$@"
+        "$_bin" restart "$@"
         return
     fi
 
@@ -967,21 +968,25 @@ ccr-start() {
         return 127
     fi
 
+    _token=$("$_op_bin" read "$_token_ref" --no-newline) || {
+        echo "Unable to read $_token_ref from 1Password; run op signin and retry." >&2
+        return 1
+    }
+
     env \
         -u ANTHROPIC_AUTH_TOKEN_OP_REF \
         -u ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT \
         -u ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE \
         -u ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE \
         -u ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1 \
-        ANTHROPIC_AUTH_TOKEN="$_token_ref" \
-        "$_op_bin" run -- "$_bin" start "$@"
+        ANTHROPIC_AUTH_TOKEN="$_token" \
+        "$_bin" restart "$@"
 }
 
 cclaude() {
     local _try
     if ! _ccr_running; then
-        ccr-start > /dev/null 2>&1 &
-        disown
+        ccr-start > /dev/null 2>&1 || return
         for _try in {1..20}; do
             _ccr_running && break
             sleep 0.25
