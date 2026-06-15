@@ -582,43 +582,45 @@ _refresh_kubecontext_after_command() {
   return "$_status"
 }
 
-_kubectl_completion_loaded=0
-_load_kubectl_completion() {
-  (( _kubectl_completion_loaded )) && return 0
-  (( $+commands[kubectl] )) || return 127
-  source <(command kubectl completion zsh)
-  _kubectl_completion_loaded=1
-}
+if [[ -o interactive ]]; then
+  _kubectl_completion_loaded=0
+  _load_kubectl_completion() {
+    (( _kubectl_completion_loaded )) && return 0
+    (( $+commands[kubectl] )) || return 127
+    source <(command kubectl completion zsh)
+    _kubectl_completion_loaded=1
+  }
 
-_kubectl_lazy_complete() {
-  (( _kubectl_completion_loaded )) || _load_kubectl_completion || return 1
+  _kubectl_lazy_complete() {
+    (( _kubectl_completion_loaded )) || _load_kubectl_completion || return 1
 
-  local _comp="${_comps[kubectl]-}"
-  [[ -n "$_comp" && "$_comp" != "_kubectl_lazy_complete" ]] || return 1
-  eval "$_comp"
-}
+    local _comp="${_comps[kubectl]-}"
+    [[ -n "$_comp" && "$_comp" != "_kubectl_lazy_complete" ]] || return 1
+    eval "$_comp"
+  }
 
-kubectl() {
-  _load_kubectl_completion
-  command kubectl "$@"
-  local _status=$?
-  _refresh_kubecontext_after_command "$_status"
-}
-compdef _kubectl_lazy_complete kubectl
-
-if (( $+commands[kubectx] )); then
-  kubectx() {
-    command kubectx "$@"
+  kubectl() {
+    _load_kubectl_completion
+    command kubectl "$@"
     local _status=$?
     _refresh_kubecontext_after_command "$_status"
   }
-fi
-if (( $+commands[kubens] )); then
-  kubens() {
-    command kubens "$@"
-    local _status=$?
-    _refresh_kubecontext_after_command "$_status"
-  }
+  compdef _kubectl_lazy_complete kubectl
+
+  if (( $+commands[kubectx] )); then
+    kubectx() {
+      command kubectx "$@"
+      local _status=$?
+      _refresh_kubecontext_after_command "$_status"
+    }
+  fi
+  if (( $+commands[kubens] )); then
+    kubens() {
+      command kubens "$@"
+      local _status=$?
+      _refresh_kubecontext_after_command "$_status"
+    }
+  fi
 fi
 
 aws() {

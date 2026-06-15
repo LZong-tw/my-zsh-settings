@@ -181,6 +181,10 @@ When enabled, both `~/.zprofile` and `~/.zshrc` can write phase timings through 
 ## Kubernetes prompt context
 Powerlevel10k uses a custom lazy kube context segment instead of the built-in `kubecontext` segment. The prompt only reads a cache at `$XDG_CACHE_HOME/p10k-kubecontext` or `~/.cache/p10k-kubecontext`; `kubectl`, `kubectx`, and `kubens` refresh that cache in the background after they run.
 
+Those `kubectl`/`kubectx`/`kubens` wrappers are interactive-shell only. Non-interactive
+shells and agent subprocesses should see the real binaries so command runners do
+not inherit a partial completion/prompt wrapper without its helper functions.
+
 ## AWS EKS credentials for kubectl
 `bin/kubectl-eks-token` is installed to `~/.local/bin/kubectl-eks-token`.
 Point EKS kubeconfig `users[].user.exec.command` at that path and pass the AWS
