@@ -159,6 +159,85 @@ codex-sub() {
     "$_bin" "$@"
 }
 
+# Optional: Headroom compression wrappers (hr-*).
+# Route the AI CLIs above through a local Headroom proxy
+# (https://headroom-docs.vercel.app) for prompt/tool-output compression and
+# prefix-cache alignment. Install once: `uv tool install 'headroom-ai[all]'`.
+# Type `hr-help` once loaded. Design choices (don't change without reason):
+#  - PURE `headroom proxy` (NOT `headroom wrap`, which durably rewrites
+#    ~/.codex/config.toml + ~/AGENTS.md). Pure proxy mutates nothing on disk;
+#    we only set ANTHROPIC_BASE_URL / OPENAI_BASE_URL per child process.
+#  - One proxy port per upstream (a running proxy is reused regardless of
+#    target). Upstream pinned via ANTHROPIC_TARGET_API_URL / OPENAI_TARGET_API_URL.
+#  - Each proxy runs --code-aware --intercept-tool-results with
+#    HEADROOM_DISABLE_KOMPRESS=1 (the LLMLingua/torch path adds 20-30s/req on CPU).
+# Note: heavily prefix-cached sessions legitimately show compressed=0 with
+# cache_saved>0 — cache beats compression there; that is success, not a bug.
+# _HR_PORT_SUB=8801      # subscription OAuth -> api.anthropic.com
+# _HR_PORT_OP=8802       # bare claude -> your internal gateway
+# _HR_PORT_JB=8803       # JBridge
+# _HR_PORT_AIR=8804      # airclaude -> CCR (127.0.0.1:3456)
+# _HR_PORT_CODEX=8805    # codex -> api.openai.com
+# _HR_PORT_CODEXSUB=8806 # codex subscription (ChatGPT)
+#
+# _hr_require() {
+#   command -v headroom >/dev/null 2>&1 && return 0
+#   echo "headroom not installed. Run: uv tool install 'headroom-ai[all]'" >&2; return 127
+# }
+# _hr_proxy() {  # $1=port $2=anthropic_target $3=openai_target
+#   _hr_require || return
+#   local _port=$1 _atgt=$2 _otgt=$3 _i
+#   curl -fsS -m 1 "http://127.0.0.1:$_port/health" >/dev/null 2>&1 && return 0
+#   command mkdir -p "$HOME/.headroom/logs"
+#   ( [[ -n "$_atgt" ]] && export ANTHROPIC_TARGET_API_URL="$_atgt"
+#     [[ -n "$_otgt" ]] && export OPENAI_TARGET_API_URL="$_otgt"
+#     export HEADROOM_DISABLE_KOMPRESS="${HEADROOM_DISABLE_KOMPRESS:-1}"
+#     headroom proxy --port "$_port" --code-aware --intercept-tool-results \
+#       >>"$HOME/.headroom/logs/hr-$_port.log" 2>&1 ) &!
+#   for _i in {1..160}; do
+#     curl -fsS -m 1 "http://127.0.0.1:$_port/health" >/dev/null 2>&1 && return 0; sleep 0.25
+#   done
+#   echo "headroom proxy on $_port did not come up; see ~/.headroom/logs/hr-$_port.log" >&2; return 1
+# }
+# hr-claude-sub() {           # subscription OAuth -> api.anthropic.com (default target)
+#   _hr_proxy "$_HR_PORT_SUB" || return
+#   CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
+#     env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY \
+#         ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_SUB" \
+#     command claude --settings '{"apiKeyHelper":""}' "$@"
+# }
+# hr-claude() {               # bare claude -> internal gateway (placeholder URL!)
+#   _hr_proxy "$_HR_PORT_OP" "${ANTHROPIC_BASE_URL_DEFAULT:-https://llm-gateway.example.internal}" || return
+#   env -u ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_OP" command claude "$@"
+# }
+# hr-claude-jb() {            # JBridge (placeholder URL!)
+#   _hr_proxy "$_HR_PORT_JB" "${ANTHROPIC_BASE_URL_JBRIDGE:-https://jbridge.example.internal/api}" || return
+#   env -u ANTHROPIC_AUTH_TOKEN \
+#       ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE" \
+#       ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_JB" command claude "$@"
+# }
+# hr-airclaude() {            # Claude -> headroom -> CCR -> gateway
+#   _hr_require || return
+#   command -v ccr >/dev/null 2>&1 || { echo "ccr not found" >&2; return 127; }
+#   ccr-start >/dev/null 2>&1
+#   _hr_proxy "$_HR_PORT_AIR" "http://127.0.0.1:3456" || return
+#   ( source <(command ccr activate) 2>/dev/null
+#     ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_AIR" \
+#       command claude --settings '{"apiKeyHelper":""}' "$@" )
+# }
+# hr-codex() {
+#   _hr_proxy "$_HR_PORT_CODEX" || return
+#   OPENAI_BASE_URL="http://127.0.0.1:$_HR_PORT_CODEX/v1" command codex "$@"
+# }
+# hr-codex-sub() {            # ChatGPT subscription may bypass the proxy
+#   _hr_proxy "$_HR_PORT_CODEXSUB" || return
+#   local _home="${CODEX_SUB_HOME:-$HOME/.codex-sub}"; command mkdir -p "$_home" || return
+#   CODEX_HOME="$_home" env -u OPENAI_API_KEY -u OPENAI_API_BASE \
+#     OPENAI_BASE_URL="http://127.0.0.1:$_HR_PORT_CODEXSUB/v1" command codex "$@"
+# }
+# hr-stop()      { local _p; for _p in $_HR_PORT_SUB $_HR_PORT_OP $_HR_PORT_JB $_HR_PORT_AIR $_HR_PORT_CODEX $_HR_PORT_CODEXSUB; do lsof -ti:"$_p" 2>/dev/null | xargs kill 2>/dev/null; done }
+# hr-stats-sum() { local _p; for _p in $_HR_PORT_SUB $_HR_PORT_OP $_HR_PORT_JB $_HR_PORT_AIR $_HR_PORT_CODEX $_HR_PORT_CODEXSUB; do curl -fsS -m1 "http://127.0.0.1:$_p/stats" 2>/dev/null | python3 -c 'import sys,json;d=json.load(sys.stdin)["summary"];print(d["api_requests"],d["compression"]["total_tokens_removed"])' 2>/dev/null; done }
+
 # Optional local PATH, aliases, or helper functions.
 # export PATH="$HOME/bin:$PATH"
 # alias workon='cd ~/work'
