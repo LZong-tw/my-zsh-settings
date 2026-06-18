@@ -216,14 +216,31 @@ codex-sub() {
 #       ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE" \
 #       ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_JB" command claude "$@"
 # }
-# hr-airclaude() {            # Claude -> headroom -> CCR -> gateway
+# hr-airclaude() {            # Claude -> headroom -> CCR -> gateway, with CCR mode handling
+#   # Delegate to the real `airclaude` CLI so its mode handling (e.g. `airclaude
+#   # pro`), CCR-config sync, and launch flags apply -- calling `claude` directly
+#   # would send "pro" as a prompt. airclaude derives Claude's ANTHROPIC_BASE_URL
+#   # from `ccr activate` (the CCR port), which would skip the proxy; a tiny PATH
+#   # shim rewrites only that one value to the headroom port. The CLI's child
+#   # spawns inherit the environment, so the shim on PATH is found.
 #   _hr_require || return
+#   command -v airclaude >/dev/null 2>&1 || { echo "airclaude not found" >&2; return 127; }
 #   command -v ccr >/dev/null 2>&1 || { echo "ccr not found" >&2; return 127; }
-#   ccr-start >/dev/null 2>&1
 #   _hr_proxy "$_HR_PORT_AIR" "http://127.0.0.1:3456" || return
-#   ( source <(command ccr activate) 2>/dev/null
-#     ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_AIR" \
-#       command claude --settings '{"apiKeyHelper":""}' "$@" )
+#   local _shim; _shim=$(command mktemp -d "${TMPDIR:-/tmp}/hr-ccrshim.XXXXXX") || return
+#   command cat >"$_shim/ccr" <<'SHIM'
+# #!/bin/sh
+# if [ "$1" = activate ]; then
+#   out=$("$HR_REAL_CCR" "$@") || exit $?
+#   printf '%s\n' "$out" | sed "s#127\.0\.0\.1:3456#127.0.0.1:${HR_AIR_PORT}#g"
+#   exit 0
+# fi
+# exec "$HR_REAL_CCR" "$@"
+# SHIM
+#   command chmod +x "$_shim/ccr"
+#   HR_REAL_CCR="$(command -v ccr)" HR_AIR_PORT="$_HR_PORT_AIR" PATH="$_shim:$PATH" \
+#     command airclaude "$@"
+#   local _rc=$?; command rm -rf "$_shim"; return $_rc
 # }
 # hr-codex() {
 #   _hr_proxy "$_HR_PORT_CODEX" || return
