@@ -232,6 +232,7 @@ MANAGED_DOTFILES=(
   ".zshrc"
   ".p10k.zsh"
   ".zsh.startup-profiler.zsh"
+  ".zsh.os-linux.zsh"
 )
 
 for dotfile in "${MANAGED_DOTFILES[@]}"; do
