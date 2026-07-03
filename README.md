@@ -139,32 +139,23 @@ cd ~/my-zsh-settings
 2. Fill in your real endpoints and 1Password references
 3. Reload with `exec zsh -l`
 
-## WSL screenshot paste bridge
-For Windows + WSL agent sessions, install the optional `wsl-screenshot-cli`
-bridge:
+## WSL2 screenshot / image paste
+On WSL2, `install.sh` drops small shims into `~/.local/bin` (from `bin-wsl/`)
+that read the **Windows** clipboard image *on demand* via `powershell.exe` and
+never rewrite it. Take a screenshot with `Win+Shift+S`, then:
 
-```bash
-./install.sh --with-wsl-screenshot-cli
-```
+- **Claude Code (WSL):** just press `Ctrl+V` — the `xclip`/`wl-paste` shims hand
+  it the PNG transparently.
+- **Codex CLI (WSL):** it reads the clipboard in-process and bypasses the shims,
+  so run `codeximg` (alias for `clipaste-paste`) and paste the printed path.
+- **Native Windows apps (Claude Code, Codex Desktop, editors):** unaffected —
+  they still see the raw bitmap, because nothing mutates the clipboard.
 
-When `wsl-screenshot-cli` is installed, `.zshrc` starts it quietly in WSL
-terminals. The intended UX is native-feeling: take a screenshot with
-`Win+Shift+S`, paste in the WSL terminal, and the prompt receives a WSL-readable
-PNG path such as `/tmp/.wsl-screenshot-cli/<hash>.png`. Pasting into Windows
-apps still behaves normally as an image/file.
-
-Useful controls:
-
-```bash
-wsl-screenshot-cli status
-wsl-screenshot-cli stop
-WSL_SCREENSHOT_CLI_AUTOSTART=0 exec zsh -l
-WSL_SCREENSHOT_CLI_INTERVAL_MS=1000 exec zsh -l
-```
-
-Keep `wslshot` as a fallback for command-driven workflows, but prefer
-`wsl-screenshot-cli` when the goal is "paste like native" UX for Claude Code,
-Codex CLI, Gemini CLI, and other WSL terminal agents.
+This deliberately avoids clipboard-watcher daemons (`clipaste`,
+`wsl-screenshot-cli`): both rewrote the Windows clipboard into a text path,
+which made native-image paste in Windows GUI apps break (Codex Desktop showed
+the path instead of the image). To repair the shims after editing them, run
+`winclip-wsl-shims` (defined in `zsh/.zsh.os-linux.zsh`).
 
 ## Optional startup profiling
 Add these to `~/.zshrc.local` only when you want profiling:
@@ -245,7 +236,5 @@ mv ~/.zshrc.backup-<timestamp> ~/.zshrc
   set plus `powerlevel10k`). Powerlevel10k is not packaged on Debian/Kali, so use
   `--with-plugins` to clone it there.
 - `--with-plugins`: clone Powerlevel10k, zsh-autosuggestions, and zsh-syntax-highlighting
-- `--with-wsl-screenshot-cli`: install `wsl-screenshot-cli` on WSL so
-  `Win+Shift+S` screenshots can be pasted into terminal agents as image paths
 - `--no-oh-my-zsh`: skip automatic Oh My Zsh installation
 - `--no-local-bin`: skip installing managed helper scripts into `~/.local/bin`

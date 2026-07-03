@@ -259,10 +259,6 @@ codex-sub() {
 # export PATH="$HOME/bin:$PATH"
 # alias workon='cd ~/work'
 
-# Optional WSL screenshot paste bridge controls.
-# export WSL_SCREENSHOT_CLI_AUTOSTART=0
-# export WSL_SCREENSHOT_CLI_INTERVAL_MS=1000
-
 # Optional portable startup profiling.
 # export ZSH_STARTUP_PROFILING=1
 # export ZSH_STARTUP_PROFILE_THRESHOLD=1.0
