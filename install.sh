@@ -252,6 +252,18 @@ if [[ "$INSTALL_LOCAL_BIN" = true ]]; then
     install -m 0755 "$helper" "$target"
     echo "Installed helper: $target"
   done
+
+  # WSL2-only: clipboard image-paste shims that read the Windows clipboard on
+  # demand via powershell.exe (see zsh/.zsh.os-linux.zsh). Installed only under
+  # WSL so they don't shadow the real xclip/wl-paste on desktop Linux/macOS.
+  if grep -qiE "microsoft|wsl" /proc/version 2>/dev/null && [[ -d "$PROJECT_DIR/bin-wsl" ]]; then
+    for shim in "$PROJECT_DIR"/bin-wsl/*; do
+      [[ -f "$shim" ]] || continue
+      target="$HOME/.local/bin/$(basename "$shim")"
+      install -m 0755 "$shim" "$target"
+      echo "Installed WSL clipboard shim: $target"
+    done
+  fi
 fi
 
 echo "Done! Restart your terminal or run: exec zsh -l"

@@ -1,0 +1,11 @@
+#!/bin/bash
+# clipaste-paste — materialize the current Windows clipboard image to a real file
+# and print its path. For Codex CLI (reads the clipboard in-process and bypasses
+# the xclip shim). Backend: clip-win-image (powershell.exe interop, never rewrites
+# the clipboard). The printed file is pruned automatically after ~1h.
+if img=$(clip-win-image 2>/dev/null) && [ -s "$img" ]; then
+    echo "$img"
+    exit 0
+fi
+echo "clipaste-paste: no image on clipboard — take a screenshot (or copy an image file) on Windows first" >&2
+exit 1

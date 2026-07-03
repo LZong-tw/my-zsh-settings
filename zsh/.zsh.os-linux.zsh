@@ -4,79 +4,42 @@
 [[ "$OSTYPE" == linux* ]] || return
 
 # --------------------------------------------------------------------------
-# clipaste — screenshot/image paste for terminal AI tools on WSL2
+# Windows-clipboard image paste for terminal AI tools on WSL2
 # --------------------------------------------------------------------------
-# Windows side runs clipaste.exe (HTTP server on 127.0.0.1:18340). This box
-# installs xclip/wl-paste shims in ~/.local/bin so Claude Code pastes images
-# with Ctrl+V directly. Codex CLI reads the clipboard in-process and BYPASSES
-# the shim, so it uses the clipaste-paste helper via this alias:
-#   take a screenshot on Windows -> run `codeximg` -> paste the printed /tmp path
+# On WSL2, ~/.local/bin holds thin shims (installed from this repo's bin-wsl/
+# by install.sh) that read the *Windows* clipboard image ON DEMAND via
+# powershell.exe and never rewrite it:
+#   clip-win-image  -> saves the current clipboard image to a PNG, prints its path
+#   xclip / wl-paste-> shadow the real tools so Claude Code pastes images w/ Ctrl+V
+#   clipaste-paste  -> for Codex CLI, which reads the clipboard in-process and
+#                      bypasses the xclip shim; prints a real path to paste.
+#
+# We deliberately do NOT run a clipboard-watcher daemon. Both clipaste and
+# wsl-screenshot-cli worked by rewriting the Windows clipboard into a text path,
+# which broke native-image paste in Windows apps (e.g. Codex Desktop showed the
+# path instead of the image). On-demand reads keep both worlds working: native
+# Windows apps see the raw bitmap; WSL fetches a copy only when asked.
+#
+# Codex CLI usage: screenshot on Windows -> run `codeximg` -> paste the printed path.
 if (( $+commands[clipaste-paste] )); then
   alias codeximg='clipaste-paste'
 fi
 
-# (Re)install the clipaste xclip/wl-paste/clipaste-paste shims. Needed on WSL2
-# *mirrored* networking, where `clipaste wsl-setup` can't auto-detect the host
-# (it only reads /etc/resolv.conf). See github.com/hqhq1025/clipaste/issues/7.
-# Usage: clipaste-wsl-shims [host]   (host defaults to 127.0.0.1 for mirrored mode)
-clipaste-wsl-shims() {
+# Reinstall/repair the WSL clipboard shims from this repo's bin-wsl/ into
+# ~/.local/bin. Handy after editing a shim; install.sh does the same on setup.
+# Override the repo location with MYZSH_REPO if it lives elsewhere.
+winclip-wsl-shims() {
   emulate -L zsh
-  local host="${1:-127.0.0.1}"
-  local url="http://${host}:18340"
-  local bin="$HOME/.local/bin"
-  mkdir -p "$bin"
-
-  if ! curl -sf -o /dev/null "${url}/health" 2>/dev/null; then
-    print -u2 "clipaste-wsl-shims: no clipaste server at ${url} — is clipaste.exe running on Windows?"
+  local repo="${MYZSH_REPO:-$HOME/my-zsh-settings}"
+  local src="$repo/bin-wsl" bin="$HOME/.local/bin"
+  if [[ ! -d "$src" ]]; then
+    print -u2 "winclip-wsl-shims: $src not found (set MYZSH_REPO to your my-zsh-settings path)"
     return 1
   fi
-
+  mkdir -p "$bin"
   local f
-  for f in xclip wl-paste; do
-    local trigger real_var
-    if [[ "$f" == xclip ]]; then
-      trigger='*"-selection clipboard"*"-t image/png"*"-o"*|*"-sel clip"*"-t image/png"*"-o"*'
-      targets='*"-selection clipboard"*"-t TARGETS"*"-o"*|*"-sel clip"*"-t TARGETS"*"-o"*'
-      real_var=REAL_XCLIP; realcmd=xclip
-    else
-      trigger='*"--type image/"*|*"-t image/"*'
-      targets='*"--list-types"*'
-      real_var=REAL_WL_PASTE; realcmd=wl-paste
-    fi
-    cat > "$bin/$f" <<SHIM
-#!/bin/bash
-# clipaste $f shim (managed by my-zsh-settings clipaste-wsl-shims)
-CLIPASTE_URL="$url"
-$real_var="\$(PATH=\$(echo "\$PATH" | sed "s|\$HOME/.local/bin:||g") command -v $realcmd 2>/dev/null)"
-case "\$*" in
-    $targets)
-        if curl -sf "\${CLIPASTE_URL}/clipboard/type" 2>/dev/null | grep -q '"image"'; then
-            echo "image/png"; exit 0
-        fi ;;
-    $trigger)
-        tmpfile=\$(mktemp /tmp/clipaste-remote-XXXXXX.png)
-        if curl -sf -o "\$tmpfile" "\${CLIPASTE_URL}/clipboard/image" 2>/dev/null && [ -s "\$tmpfile" ]; then
-            cat "\$tmpfile"; rm -f "\$tmpfile"; exit 0
-        fi
-        rm -f "\$tmpfile" ;;
-esac
-if [ -n "\$$real_var" ] && [ -x "\$$real_var" ]; then exec "\$$real_var" "\$@"; else echo "$realcmd not found" >&2; exit 1; fi
-SHIM
-    chmod +x "$bin/$f"
+  for f in clip-win-image xclip wl-paste clipaste-paste; do
+    [[ -f "$src/$f" ]] && install -m 0755 "$src/$f" "$bin/$f"
   done
-
-  cat > "$bin/clipaste-paste" <<SHIM
-#!/bin/bash
-# clipaste-paste helper (managed by my-zsh-settings clipaste-wsl-shims)
-CLIPASTE_URL="$url"
-if ! curl -sf "\${CLIPASTE_URL}/clipboard/type" 2>/dev/null | grep -q '"image"'; then
-    echo "clipaste-paste: no image on clipboard - take a screenshot on Windows first" >&2; exit 1
-fi
-out="\${TMPDIR:-/tmp}/clipaste-\$(date +%s)-\$\$.png"
-if curl -sf -o "\$out" "\${CLIPASTE_URL}/clipboard/image" 2>/dev/null && [ -s "\$out" ]; then echo "\$out"; exit 0; fi
-rm -f "\$out"; echo "clipaste-paste: failed to fetch image from \${CLIPASTE_URL}" >&2; exit 1
-SHIM
-  chmod +x "$bin/clipaste-paste"
-
-  print "clipaste shims installed in $bin (host: $host). xclip/wl-paste/clipaste-paste ready."
+  print "winclip shims installed in $bin from $src."
 }

@@ -1,0 +1,38 @@
+#!/bin/bash
+# clip-win-image — read the CURRENT Windows clipboard image on-demand and save it
+# to a real PNG, printing that file's WSL path. Exits non-zero if the clipboard
+# holds no image. Backend: powershell.exe interop. It NEVER writes to the Windows
+# clipboard, so native Windows apps (Codex Desktop, Claude Code) keep seeing the
+# raw bitmap. This replaces the old clipaste daemon, whose clipboard watcher
+# rewrote screenshots into a text path and broke native-image paste.
+set -u
+
+# Only meaningful under WSL2 (needs Windows interop). On macOS / bare Linux there
+# is no powershell.exe, so exit fast and let callers fall through to the real tool.
+command -v powershell.exe >/dev/null 2>&1 || exit 1
+
+read -r -d '' PS <<'PSEOF'
+$ErrorActionPreference='Stop'
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+$img=[System.Windows.Forms.Clipboard]::GetImage()
+if($null -eq $img){exit 3}
+$dir=Join-Path $env:TEMP 'wsl-clip'
+[void][System.IO.Directory]::CreateDirectory($dir)
+Get-ChildItem $dir -Filter *.png -ErrorAction SilentlyContinue | Where-Object {$_.LastWriteTime -lt (Get-Date).AddHours(-1)} | Remove-Item -Force -ErrorAction SilentlyContinue
+$p=Join-Path $dir ('clip-'+[Guid]::NewGuid().ToString('N')+'.png')
+$img.Save($p,[System.Drawing.Imaging.ImageFormat]::Png)
+[Console]::Out.Write($p)
+PSEOF
+
+# -EncodedCommand (UTF-16LE base64) sidesteps all WSL<->Windows quoting/newline
+# mangling. -STA is required for clipboard image reads.
+enc=$(printf '%s' "$PS" | iconv -f UTF-8 -t UTF-16LE 2>/dev/null | base64 -w0 2>/dev/null)
+[ -n "$enc" ] || exit 1
+
+win_path=$(powershell.exe -NoProfile -STA -EncodedCommand "$enc" 2>/dev/null | tr -d '\r\n')
+[ -n "$win_path" ] || exit 1
+
+wsl_path=$(wslpath -u "$win_path" 2>/dev/null)
+[ -n "$wsl_path" ] && [ -s "$wsl_path" ] || exit 1
+printf '%s\n' "$wsl_path"

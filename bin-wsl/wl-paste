@@ -1,0 +1,27 @@
+#!/bin/bash
+# on-demand Windows-clipboard image shim for Wayland — no clipboard rewrite.
+# Backend: clip-win-image (powershell.exe interop). Replaces the clipaste HTTP shim.
+REAL_WL_PASTE="$(PATH=$(echo "$PATH" | sed "s|$HOME/.local/bin:||g") command -v wl-paste 2>/dev/null)"
+case "$*" in
+    *"--list-types"*)
+        if img=$(clip-win-image 2>/dev/null); then
+            echo "image/png"
+            echo "text/plain"
+            rm -f "$img"
+            exit 0
+        fi
+        ;;
+    *"--type image/"*|*"-t image/"*)
+        if img=$(clip-win-image 2>/dev/null) && [ -s "$img" ]; then
+            cat "$img"
+            rm -f "$img"
+            exit 0
+        fi
+        ;;
+esac
+if [ -n "$REAL_WL_PASTE" ] && [ -x "$REAL_WL_PASTE" ]; then
+    exec "$REAL_WL_PASTE" "$@"
+else
+    echo "wl-paste not found" >&2
+    exit 1
+fi

@@ -1,0 +1,27 @@
+#!/bin/bash
+# on-demand Windows-clipboard image shim — no clipboard rewrite.
+# Backend: clip-win-image (powershell.exe interop). Replaces the clipaste HTTP shim.
+REAL_XCLIP="$(PATH=$(echo "$PATH" | sed "s|$HOME/.local/bin:||g") command -v xclip 2>/dev/null)"
+case "$*" in
+    *"-selection clipboard"*"-t TARGETS"*"-o"*|*"-sel clip"*"-t TARGETS"*"-o"*)
+        if img=$(clip-win-image 2>/dev/null); then
+            echo "TARGETS"
+            echo "image/png"
+            rm -f "$img"
+            exit 0
+        fi
+        ;;
+    *"-selection clipboard"*"-t image/png"*"-o"*|*"-sel clip"*"-t image/png"*"-o"*)
+        if img=$(clip-win-image 2>/dev/null) && [ -s "$img" ]; then
+            cat "$img"
+            rm -f "$img"
+            exit 0
+        fi
+        ;;
+esac
+if [ -n "$REAL_XCLIP" ] && [ -x "$REAL_XCLIP" ]; then
+    exec "$REAL_XCLIP" "$@"
+else
+    echo "xclip not found" >&2
+    exit 1
+fi
