@@ -925,6 +925,22 @@ claude() {
 devops() {
     local _bin
     _bin=$(whence -p devops) || { echo "devops not found" >&2; return 127; }
+
+    # Staleness guard: `go install` freezes a snapshot of the source; a later
+    # `git pull` updates the tree but never rebuilds ~/go/bin/devops, so the
+    # binary silently drifts behind. Warn (never block) when the installed
+    # build revision is an ancestor of the devops-tools source HEAD.
+    local _src=~/projects/devops-tools
+    if [[ -d $_src/.git ]] && (( $+commands[go] )); then
+        local _binrev _srcrev
+        _binrev=$(go version -m "$_bin" 2>/dev/null | awk -F= '/[[:space:]]vcs\.revision=/{print $2; exit}')
+        _srcrev=$(git -C "$_src" rev-parse HEAD 2>/dev/null)
+        if [[ -n $_binrev && -n $_srcrev && $_binrev != $_srcrev ]] \
+           && git -C "$_src" merge-base --is-ancestor "$_binrev" "$_srcrev" 2>/dev/null; then
+            print -u2 "⚠️  devops binary 落後 source $(git -C "$_src" rev-list --count "$_binrev..$_srcrev") 個 commit（${_binrev:0:7} → ${_srcrev:0:7}）。重裝：cd $_src && go install ./devops/"
+        fi
+    fi
+
     with-secrets "$_bin" "$@"
 }
 
