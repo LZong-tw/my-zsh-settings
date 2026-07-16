@@ -97,12 +97,21 @@ claude-sub() {
     _oauth_env=(CLAUDE_CODE_OAUTH_TOKEN="$_oauth_token")
   fi
 
-  # Exclude user settings so an apiKeyHelper cannot override the subscription.
+  # Post-cutover design: CCR routing for plain `claude` lives in shell env
+  # vars exported by the AirKit snippet, so unsetting them here reaches the
+  # subscription. User settings stay fully loaded: statusline, hooks, and
+  # permissions keep working, and detach/reattach is safe.
+  # REQUIRES the CCR "Claude Code" agent profile to no longer be 系统默认
+  # (system default) in `ccr ui`: while that takeover still injects
+  # apiKeyHelper into ~/.claude/settings.json, this function loads it and
+  # auths against the company key instead of the subscription.
   # Keep CLAUDE_CONFIG_DIR unchanged so sessions stay shared.
   CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
     env -u ANTHROPIC_AUTH_TOKEN \
     -u ANTHROPIC_API_KEY \
     -u ANTHROPIC_BASE_URL \
+    -u ANTHROPIC_API_BASE_URL \
+    -u CLAUDE_AGENT_API_BASE_URL \
     -u ANTHROPIC_BASE_URL_DEFAULT \
     -u ANTHROPIC_BASE_URL_JBRIDGE \
     -u ANTHROPIC_BASE_URL_AZURE \
@@ -131,8 +140,7 @@ claude-sub() {
     -u CLAUDE_CODE_SIMULATE_PROXY_USAGE \
     -u CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS \
     "${_oauth_env[@]}" \
-    "$_bin" --setting-sources project,local \
-    --settings '{"env":{"CLAUDE_CODE_SUBPROCESS_ENV_SCRUB":"0"}}' "$@"
+    "$_bin" "$@"
 }
 
 codex-sub() {
@@ -200,11 +208,16 @@ codex-sub() {
 #   echo "headroom proxy on $_port did not come up; see ~/.headroom/logs/hr-$_port.log" >&2; return 1
 # }
 # hr-claude-sub() {           # subscription OAuth -> api.anthropic.com (default target)
+#   # Unset the AirKit snippet's CCR routing exports; user settings stay
+#   # fully loaded, and env wins over them for the proxy ANTHROPIC_BASE_URL.
+#   # Requires the CCR "Claude Code" agent profile to not be 系统默认 (see
+#   # claude-sub note above) — otherwise the injected apiKeyHelper wins.
 #   _hr_proxy "$_HR_PORT_SUB" || return
 #   CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
 #     env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY \
+#         -u ANTHROPIC_API_BASE_URL -u CLAUDE_AGENT_API_BASE_URL \
 #         ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_SUB" \
-#     command claude --setting-sources project,local "$@"
+#     command claude "$@"
 # }
 # hr-claude() {               # bare claude -> internal gateway (placeholder URL!)
 #   _hr_proxy "$_HR_PORT_OP" "${ANTHROPIC_BASE_URL_DEFAULT:-https://llm-gateway.example.internal}" || return
