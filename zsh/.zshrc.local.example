@@ -97,14 +97,15 @@ claude-sub() {
     _oauth_env=(CLAUDE_CODE_OAUTH_TOKEN="$_oauth_token")
   fi
 
-  # Post-cutover design: CCR routing for plain `claude` lives in shell env
-  # vars exported by the AirKit snippet, so unsetting them here reaches the
-  # subscription. User settings stay fully loaded: statusline, hooks, and
+  # Plain `claude` routes to the company gateway from shell env (its own
+  # ANTHROPIC_BASE_URL plus a command-scoped token in the claude() wrapper),
+  # so unsetting those company-line vars here reaches the personal subscription
+  # instead. User settings stay fully loaded: statusline, hooks, and
   # permissions keep working, and detach/reattach is safe.
   # REQUIRES the CCR "Claude Code" agent profile to no longer be 系统默认
-  # (system default) in `ccr ui`: while that takeover still injects
-  # apiKeyHelper into ~/.claude/settings.json, this function loads it and
-  # auths against the company key instead of the subscription.
+  # (system default) in `ccr ui`, AND the ~/.claude/settings.json apiKeyHelper
+  # to stay removed: either one would inject or outrank a company key and auth
+  # against it instead of the subscription.
   # Keep CLAUDE_CONFIG_DIR unchanged so sessions stay shared.
   CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
     env -u ANTHROPIC_AUTH_TOKEN \

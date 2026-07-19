@@ -915,11 +915,25 @@ done
 unset _cmd
 
 claude() {
-    local _bin
+    local _bin _token
     _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
-    # Claude auth is handled natively via ~/.claude/settings.json apiKeyHelper.
-    # Clear inherited auth-token env so parent processes can't override the helper.
-    env -u ANTHROPIC_AUTH_TOKEN "$_bin" "$@"
+    # Plain claude talks the native Anthropic wire directly to the company
+    # gateway (ANTHROPIC_BASE_URL_DEFAULT), authed with the litellm key resolved
+    # command-scoped here. This is intentionally NOT a global settings.json
+    # apiKeyHelper: as a global helper it outranks and would hijack claude-sub's
+    # subscription OAuth by auth precedence, and it cannot be cleared per-launch
+    # across detach/reattach. CCR is only for airclaude, so a stopped CCR daemon
+    # does not affect plain claude.
+    _token=$(ANTHROPIC_AUTH_TOKEN_OP_REF="${ANTHROPIC_AUTH_TOKEN_OP_REF:-op://Employee/CLI API Keys/anthropic_auth_token}" \
+             "$HOME/.claude/api-key-helper.sh") \
+      || { echo "claude: could not resolve company API token from 1Password (run 'op signin')" >&2; return 1; }
+    env -u ANTHROPIC_API_KEY \
+        -u ANTHROPIC_API_BASE_URL \
+        -u CLAUDE_AGENT_API_BASE_URL \
+        -u CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY \
+        ANTHROPIC_AUTH_TOKEN="$_token" \
+        ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL_DEFAULT:-$ANTHROPIC_BASE_URL}" \
+        "$_bin" "$@"
 }
 
 devops() {
