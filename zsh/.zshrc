@@ -957,72 +957,6 @@ devops() {
 
     with-secrets "$_bin" "$@"
 }
-
-# ===========================================
-# 11. CLAUDE CODE ROUTER
-# ===========================================
-_ccr_health() {
-    command curl -fsS -m 1 "${CCR_HEALTH_URL:-http://127.0.0.1:${CCR_PORT:-3456}/health}" >/dev/null 2>&1
-}
-
-_ccr_running() {
-    _ccr_health && return 0
-    command ccr status 2>/dev/null | command grep -q "Status: Running"
-}
-
-ccr-start() {
-    local _bin _op_bin _token_ref _token
-    _bin=$(whence -p ccr) || { echo "ccr not found" >&2; return 127; }
-
-    if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" && "$ANTHROPIC_AUTH_TOKEN" != op://* ]]; then
-        "$_bin" restart "$@"
-        return
-    fi
-
-    _token_ref="${CCR_ANTHROPIC_AUTH_TOKEN_OP_REF:-${ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT:-${ANTHROPIC_AUTH_TOKEN_OP_REF:-}}}"
-    if [[ -z "$_token_ref" ]]; then
-        echo "Missing CCR_ANTHROPIC_AUTH_TOKEN_OP_REF or ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT for ccr-start." >&2
-        return 1
-    fi
-
-    _op_bin=${OP_BIN:-}
-    if [[ -z "$_op_bin" ]]; then
-        _op_bin=$(command -v op 2>/dev/null) || { echo "op not found; cannot resolve $_token_ref" >&2; return 127; }
-    elif [[ ! -x "$_op_bin" ]]; then
-        echo "op not executable: $_op_bin" >&2
-        return 127
-    fi
-
-    _token=$("$_op_bin" read "$_token_ref" --no-newline) || {
-        echo "Unable to read $_token_ref from 1Password; run op signin and retry." >&2
-        return 1
-    }
-
-    env \
-        -u ANTHROPIC_AUTH_TOKEN_OP_REF \
-        -u ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT \
-        -u ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE \
-        -u ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE \
-        -u ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1 \
-        ANTHROPIC_AUTH_TOKEN="$_token" \
-        "$_bin" restart "$@"
-}
-
-cclaude() {
-    local _try
-    if ! _ccr_running; then
-        ccr-start > /dev/null 2>&1 || return
-        for _try in {1..20}; do
-            _ccr_running && break
-            sleep 0.25
-        done
-    fi
-    if ! _ccr_running; then
-        echo "ccr is not running; run ccr-start to see the startup error." >&2
-        return 1
-    fi
-    (source <(command ccr activate) && command claude --settings '{"apiKeyHelper":""}' "$@")
-}
 _zsh_startup_mark functions
 
 # Debian/Kali command-not-found helper, when present.
@@ -1034,13 +968,13 @@ _zsh_startup_mark command-not-found
 _zsh_startup_mark os-linux
 
 # ===========================================
-# 12. LOCAL OVERRIDES
+# 11. LOCAL OVERRIDES
 # ===========================================
 [[ -r "$_zsh_local_override" ]] && source "$_zsh_local_override"
 _zsh_startup_mark local-overrides
 
 # ===========================================
-# 13. BACKGROUND TASKS
+# 12. BACKGROUND TASKS
 # ===========================================
 _should_load_iterm2_shell_integration() {
   [[ -z "${ITERMS_SHELL_INTEGRATION_SKIPPED:-}" ]] || return 1
@@ -1064,7 +998,7 @@ zcompile_if_needed "$_zsh_p10k_file"
 _zsh_startup_mark background
 
 # ===========================================
-# 14. FINISH
+# 13. FINISH
 # ===========================================
 # Prompt: Powerlevel10k when available, otherwise Kali's native two-line prompt.
 if [[ -n "${_zsh_p10k_loaded:-}" ]]; then
