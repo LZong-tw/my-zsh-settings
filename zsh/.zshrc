@@ -83,6 +83,7 @@ with-secrets() {
         -u ANTHROPIC_AUTH_TOKEN_OP_REF \
         -u ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT \
         -u ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE \
+        -u ANTHROPIC_AUTH_TOKEN_OP_REF_WEB \
         -u ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE \
         -u ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1 \
         "${_env_args[@]}" command op run -- "$@"

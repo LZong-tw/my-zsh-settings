@@ -8,6 +8,7 @@ export AWS_REGION="ap-northeast-1"
 # export ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL_DEFAULT"
 # Claude Code appends /v1/messages; include any gateway prefix needed before /v1.
 # export ANTHROPIC_BASE_URL_JBRIDGE="https://jbridge.example.internal/api"
+# export ANTHROPIC_BASE_URL_WEB="https://litellm.example.internal"
 # Pin provider-specific model ids for Claude Code. Some gateways reject [1m]
 # aliases in raw /v1/messages calls but Claude Code still accepts them via
 # /model; use the Claude Code-accepted id here, not only the raw API catalog.
@@ -24,6 +25,7 @@ export GITLAB_API_URL="https://gitlab.example.internal"
 # 1Password secret references used by `with-secrets` and related wrappers.
 export ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT="op://Vault/Item/anthropic_auth_token"
 export ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE="op://Vault/Item/anthropic_auth_token_jbridge"
+export ANTHROPIC_AUTH_TOKEN_OP_REF_WEB="op://Vault/Item/web_litellm"
 export ANTHROPIC_AUTH_TOKEN_OP_REF="$ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT"
 # Optional 1Password ref used by ccr-start for ~/.claude-code-router/config.json
 # entries such as "api_key": "$ANTHROPIC_AUTH_TOKEN".
@@ -65,6 +67,23 @@ claude-jbridge() {
 
 claude-jb() {
   claude-jbridge "$@"
+}
+
+claude-web() {
+  local _bin _token
+  _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
+
+  _token=$(ANTHROPIC_AUTH_TOKEN_OP_REF="${ANTHROPIC_AUTH_TOKEN_OP_REF_WEB:-op://Vault/Item/web_litellm}" \
+           "$HOME/.claude/api-key-helper.sh") \
+    || { echo "claude-web: could not resolve web API token from 1Password (run 'op signin')" >&2; return 1; }
+
+  env -u ANTHROPIC_API_KEY \
+      -u ANTHROPIC_API_BASE_URL \
+      -u CLAUDE_AGENT_API_BASE_URL \
+      -u CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY \
+      ANTHROPIC_AUTH_TOKEN="$_token" \
+      ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL_WEB:-https://litellm.example.internal}" \
+      "$_bin" "$@"
 }
 
 claude-sub() {
@@ -115,10 +134,12 @@ claude-sub() {
     -u CLAUDE_AGENT_API_BASE_URL \
     -u ANTHROPIC_BASE_URL_DEFAULT \
     -u ANTHROPIC_BASE_URL_JBRIDGE \
+    -u ANTHROPIC_BASE_URL_WEB \
     -u ANTHROPIC_BASE_URL_AZURE \
     -u ANTHROPIC_AUTH_TOKEN_OP_REF \
     -u ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT \
     -u ANTHROPIC_AUTH_TOKEN_OP_REF_JBRIDGE \
+    -u ANTHROPIC_AUTH_TOKEN_OP_REF_WEB \
     -u ANTHROPIC_AUTH_TOKEN_OP_REF_AZURE \
     -u ANTHROPIC_AUTH_TOKEN_OP_REF_ALT1 \
     -u ANTHROPIC_MODEL \
