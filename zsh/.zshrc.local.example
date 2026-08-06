@@ -199,8 +199,11 @@ codex-sub() {
 #    we only set ANTHROPIC_BASE_URL / OPENAI_BASE_URL per child process.
 #  - One proxy port per upstream (a running proxy is reused regardless of
 #    target). Upstream pinned via ANTHROPIC_TARGET_API_URL / OPENAI_TARGET_API_URL.
-#  - Each proxy runs --code-aware --intercept-tool-results with
-#    HEADROOM_DISABLE_KOMPRESS=1 (the LLMLingua/torch path adds 20-30s/req on CPU).
+#  - Cache-first Claude paths use `--mode cache` so prior turns stay byte-stable;
+#    web_litellm uses `--mode token` because its routed models do not promise a
+#    provider prefix-cache contract. The latter may rewrite prior turns for savings.
+#  - Each proxy runs --code-aware --intercept-tool-results. Kompress stays off by
+#    default because the LLMLingua/torch path adds 20-30s/req on CPU.
 # Note: heavily prefix-cached sessions legitimately show compressed=0 with
 # cache_saved>0 — cache beats compression there; that is success, not a bug.
 # _HR_PORT_SUB=8801      # subscription OAuth -> api.anthropic.com
@@ -209,20 +212,27 @@ codex-sub() {
 # _HR_PORT_AIR=8804      # airclaude -> CCR (127.0.0.1:3456)
 # _HR_PORT_CODEX=8805    # codex -> api.openai.com
 # _HR_PORT_CODEXSUB=8806 # codex subscription (ChatGPT)
+# _HR_PORT_WEB=8807      # claude-web -> AirKit web_litellm_anthropic
 #
 # _hr_require() {
 #   command -v headroom >/dev/null 2>&1 && return 0
 #   echo "headroom not installed. Run: uv tool install 'headroom-ai[all]'" >&2; return 127
 # }
-# _hr_proxy() {  # $1=port $2=anthropic_target $3=openai_target
+# _hr_proxy() {  # $1=port $2=anthropic_target $3=openai_target $4=mode $5=disable_kompress
 #   _hr_require || return
-#   local _port=$1 _atgt=$2 _otgt=$3 _i
-#   curl -fsS -m 1 "http://127.0.0.1:$_port/health" >/dev/null 2>&1 && return 0
+#   local _port=$1 _atgt=$2 _otgt=$3 _mode=${4:-token} _disable_kompress=${5:-1} _i _running_mode
+#   if curl -fsS -m 1 "http://127.0.0.1:$_port/health" >/dev/null 2>&1; then
+#     _running_mode=$(curl -fsS -m 1 "http://127.0.0.1:$_port/stats" 2>/dev/null | jq -r '.summary.mode // .config.mode // .mode // empty' 2>/dev/null)
+#     [[ -z "$_running_mode" || "$_running_mode" == "$_mode" ]] && return 0
+#     echo "headroom proxy $_port is mode=$_running_mode; requested mode=$_mode (run hr-stop, then retry)" >&2
+#     return 2
+#   fi
 #   command mkdir -p "$HOME/.headroom/logs"
 #   ( [[ -n "$_atgt" ]] && export ANTHROPIC_TARGET_API_URL="$_atgt"
 #     [[ -n "$_otgt" ]] && export OPENAI_TARGET_API_URL="$_otgt"
-#     export HEADROOM_DISABLE_KOMPRESS="${HEADROOM_DISABLE_KOMPRESS:-1}"
-#     headroom proxy --port "$_port" --code-aware --intercept-tool-results \
+#     export HEADROOM_MODE="$_mode"
+#     export HEADROOM_DISABLE_KOMPRESS="$_disable_kompress"
+#     headroom proxy --port "$_port" --mode "$_mode" --code-aware --intercept-tool-results \
 #       >>"$HOME/.headroom/logs/hr-$_port.log" 2>&1 ) &!
 #   for _i in {1..160}; do
 #     curl -fsS -m 1 "http://127.0.0.1:$_port/health" >/dev/null 2>&1 && return 0; sleep 0.25
@@ -234,7 +244,7 @@ codex-sub() {
 #   # fully loaded, and env wins over them for the proxy ANTHROPIC_BASE_URL.
 #   # Requires the CCR "Claude Code" agent profile to not be 系统默认 (see
 #   # claude-sub note above) — otherwise the injected apiKeyHelper wins.
-#   _hr_proxy "$_HR_PORT_SUB" || return
+#   _hr_proxy "$_HR_PORT_SUB" "" "" cache 1 || return
 #   CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
 #     env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY \
 #         -u ANTHROPIC_API_BASE_URL -u CLAUDE_AGENT_API_BASE_URL \
@@ -242,8 +252,16 @@ codex-sub() {
 #     command claude "$@"
 # }
 # hr-claude() {               # bare claude -> internal gateway (placeholder URL!)
-#   _hr_proxy "$_HR_PORT_OP" "${ANTHROPIC_BASE_URL_DEFAULT:-https://llm-gateway.example.internal}" || return
+#   _hr_proxy "$_HR_PORT_OP" "${ANTHROPIC_BASE_URL_DEFAULT:-https://llm-gateway.example.internal}" "" cache 1 || return
 #   env -u ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_OP" command claude "$@"
+# }
+# hr-claude-web() {         # AirKit web mode -> web_litellm_anthropic
+#   _hr_require || return
+#   command -v airclaude >/dev/null 2>&1 || { echo "airclaude not found" >&2; return 127; }
+#   command -v ccr >/dev/null 2>&1 || { echo "ccr not found" >&2; return 127; }
+#   _hr_proxy "$_HR_PORT_WEB" "${ANTHROPIC_BASE_URL_WEB:-https://litellm.example.internal}" "" token 1 || return
+#   AIRCLAUDE_ANTHROPIC_PROVIDER_BASE_URL="http://127.0.0.1:$_HR_PORT_WEB/v1/messages" \
+#     command airclaude --profile oneportal-lowcost --mode web -- "$@"
 # }
 # hr-claude-jb() {            # JBridge (placeholder URL!)
 #   _hr_proxy "$_HR_PORT_JB" "${ANTHROPIC_BASE_URL_JBRIDGE:-https://jbridge.example.internal/api}" || return
@@ -257,7 +275,7 @@ codex-sub() {
 #   _hr_require || return
 #   command -v airclaude >/dev/null 2>&1 || { echo "airclaude not found" >&2; return 127; }
 #   command -v ccr >/dev/null 2>&1 || { echo "ccr not found" >&2; return 127; }
-#   _hr_proxy "$_HR_PORT_AIR" "" "${ANTHROPIC_BASE_URL_DEFAULT:-https://llm-gateway.example.internal}" || return
+#   _hr_proxy "$_HR_PORT_AIR" "" "${ANTHROPIC_BASE_URL_DEFAULT:-https://llm-gateway.example.internal}" cache 1 || return
 #   AIRCLAUDE_PROVIDER_BASE_URL="http://127.0.0.1:$_HR_PORT_AIR/v1/chat/completions" command airclaude "$@"
 # }
 # hr-codex() {
@@ -270,8 +288,64 @@ codex-sub() {
 #   CODEX_HOME="$_home" env -u OPENAI_API_KEY -u OPENAI_API_BASE \
 #     OPENAI_BASE_URL="http://127.0.0.1:$_HR_PORT_CODEXSUB/v1" command codex "$@"
 # }
-# hr-stop()      { local _p; for _p in $_HR_PORT_SUB $_HR_PORT_OP $_HR_PORT_JB $_HR_PORT_AIR $_HR_PORT_CODEX $_HR_PORT_CODEXSUB; do lsof -ti:"$_p" 2>/dev/null | xargs kill 2>/dev/null; done }
-# hr-stats-sum() { local _p; for _p in $_HR_PORT_SUB $_HR_PORT_OP $_HR_PORT_JB $_HR_PORT_AIR $_HR_PORT_CODEX $_HR_PORT_CODEXSUB; do curl -fsS -m1 "http://127.0.0.1:$_p/stats" 2>/dev/null | python3 -c 'import sys,json;d=json.load(sys.stdin)["summary"];print(d["api_requests"],d["compression"]["total_tokens_removed"])' 2>/dev/null; done }
+# hr-stop()      { local _p; for _p in $_HR_PORT_SUB $_HR_PORT_OP $_HR_PORT_JB $_HR_PORT_AIR $_HR_PORT_WEB $_HR_PORT_CODEX $_HR_PORT_CODEXSUB; do lsof -ti:"$_p" 2>/dev/null | xargs kill 2>/dev/null; done }
+# hr-stats-sum() { local _p; for _p in $_HR_PORT_SUB $_HR_PORT_OP $_HR_PORT_JB $_HR_PORT_AIR $_HR_PORT_WEB $_HR_PORT_CODEX $_HR_PORT_CODEXSUB; do curl -fsS -m1 "http://127.0.0.1:$_p/stats" 2>/dev/null | python3 -c 'import sys,json;d=json.load(sys.stdin)["summary"];print(d["api_requests"],d["compression"]["total_tokens_removed"])' 2>/dev/null; done }
+# hr-headroom-check() {
+#   local _p _stats
+#   for _p in $_HR_PORT_SUB $_HR_PORT_OP $_HR_PORT_JB $_HR_PORT_AIR $_HR_PORT_WEB $_HR_PORT_CODEX $_HR_PORT_CODEXSUB; do
+#     _stats=$(curl -fsS -m 1 "http://127.0.0.1:$_p/stats" 2>/dev/null) || { print "$_p: not running"; continue; }
+#     print -r -- "$_stats" | jq -r --arg p "$_p" '(.summary // {}) as $s | ($s.compression // {}) as $c | ($s.cost // {}) as $cost | "\($p): mode=\($s.mode // "unknown") reqs=\($s.api_requests // 0) tokens_removed=\($c.total_tokens_removed // 0) savings_pct=\($cost.savings_pct // 0) cache_savings_usd=\(($cost.breakdown // {}).cache_savings_usd // 0)"'
+#   done
+# }
+# hr-choices() {
+#   cat <<'EOF'
+# Headroom choices (choose by situation)
+#
+#   RECOMMENDED
+#   hr air [args]       daily coding / default CCR -> OnePortal, cache-first
+#
+#   EXPLICIT SCENARIOS
+#   hr web [args]       AirKit web mode / Web LiteLLM, token-saving mode
+#   hr sub [args]       personal Claude subscription / api.anthropic.com OAuth
+#
+#   ADVANCED ROUTES
+#   hr claude [args]    direct OnePortal Anthropic endpoint
+#   hr jb [args]        JBridge endpoint
+#   hr codex [args]     OpenAI API Codex account
+#   hr codex-sub [args] ChatGPT subscription (may bypass proxy)
+#
+#   OBSERVE
+#   hr check            current proxy modes, compression, and cache savings
+#   hr help             full technical route details
+# EOF
+# }
+# hr() {
+#   local _route=${1:-}
+#   if [[ -z "$_route" ]]; then
+#     hr-choices
+#     return 0
+#   fi
+#   shift
+#   case "$_route" in
+#     air|airclaude|a) hr-airclaude "$@" ;;
+#     claude|direct|c) hr-claude "$@" ;;
+#     web|w) hr-claude-web "$@" ;;
+#     sub|subscription|s) hr-claude-sub "$@" ;;
+#     jb|jbridge|j) hr-claude-jb "$@" ;;
+#     codex|cx) hr-codex "$@" ;;
+#     codex-sub|cx-sub) hr-codex-sub "$@" ;;
+#     choices|routes|which) hr-choices ;;
+#     check|status) hr-headroom-check "$@" ;;
+#     stats) hr-stats-sum "$@" ;;
+#     stop) hr-stop "$@" ;;
+#     help|-h|--help) hr-help ;;
+#     *)
+#       print "unknown Headroom route: $_route"
+#       print 'Try: hr air | claude | web | sub | check | help'
+#       return 2
+#       ;;
+#   esac
+# }
 
 # Optional local PATH, aliases, or helper functions.
 # export PATH="$HOME/bin:$PATH"
