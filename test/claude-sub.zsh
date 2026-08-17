@@ -6,7 +6,8 @@ source_file="${CLAUDE_SUB_SOURCE:-$repo_root/zsh/.zshrc.local.example}"
 tmpdir="$(command mktemp -d)"
 trap 'command rm -rf "$tmpdir"' EXIT
 
-command mkdir -p "$tmpdir/bin" "$tmpdir/claude-config"
+command mkdir -p "$tmpdir/bin" "$tmpdir/claude-config" "$tmpdir/audit-plugin/.claude-plugin"
+command touch "$tmpdir/audit-plugin/.claude-plugin/plugin.json"
 
 cat > "$tmpdir/bin/claude" <<'EOF'
 #!/bin/sh
@@ -26,6 +27,7 @@ export PATH="$tmpdir/bin:$PATH"
 export OP_BIN="$tmpdir/bin/op"
 export CLAUDE_CONFIG_DIR="$tmpdir/claude-config"
 export CLAUDE_SUB_OAUTH_TOKEN_OP_REF="op://Test/Claude/oauth"
+export AIRKIT_AUDIT_PLUGIN_DIR="$tmpdir/audit-plugin"
 
 # CCR routing env as the AirKit snippet exports it for plain `claude`.
 export ANTHROPIC_AUTH_TOKEN="wrong-provider-token"
@@ -55,6 +57,17 @@ fi
 if ! command grep -qx -- '--model' "$tmpdir/claude.args" \
   || ! command grep -qx -- 'sonnet' "$tmpdir/claude.args"; then
   print "claude-sub dropped user arguments" >&2
+  exit 1
+fi
+
+if ! command grep -qx -- '--plugin-dir' "$tmpdir/claude.args" \
+  || ! command grep -qx -- "$AIRKIT_AUDIT_PLUGIN_DIR" "$tmpdir/claude.args"; then
+  print "claude-sub did not attach the audit plugin" >&2
+  exit 1
+fi
+
+if ! command grep -qx 'AIRKIT_AUDIT_ENABLED=1' "$tmpdir/claude.env"; then
+  print "claude-sub did not enable audit-only hooks" >&2
   exit 1
 fi
 

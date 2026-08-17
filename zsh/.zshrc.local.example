@@ -87,9 +87,19 @@ claude-web() {
 }
 
 claude-sub() {
-  local _bin _arg _is_print _oauth_token _op_bin
-  local -a _oauth_env
+  local _bin _arg _is_print _oauth_token _op_bin _audit_plugin_dir
+  local -a _oauth_env _audit_args
   _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
+
+  _audit_plugin_dir="${AIRKIT_AUDIT_PLUGIN_DIR:-$HOME/.config/ai-runtime-kit/plugins/airkit-context}"
+  if [[ -f "$_audit_plugin_dir/.claude-plugin/plugin.json" ]]; then
+    for _arg in "$@"; do
+      [[ "$_arg" == "--plugin-dir" || "$_arg" == --plugin-dir=* ]] && break
+    done
+    if [[ -z "$_arg" || ( "$_arg" != "--plugin-dir" && "$_arg" != --plugin-dir=* ) ]]; then
+      _audit_args=(--plugin-dir "$_audit_plugin_dir")
+    fi
+  fi
 
   for _arg in "$@"; do
     case "$_arg" in
@@ -161,8 +171,9 @@ claude-sub() {
     -u CLAUDE_CODE_USE_FOUNDRY \
     -u CLAUDE_CODE_SIMULATE_PROXY_USAGE \
     -u CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS \
+    AIRKIT_AUDIT_ENABLED=1 \
     "${_oauth_env[@]}" \
-    "$_bin" "$@"
+    "$_bin" "${_audit_args[@]}" "$@"
 }
 
 codex-sub() {
@@ -240,6 +251,9 @@ codex-sub() {
 #   echo "headroom proxy on $_port did not come up; see ~/.headroom/logs/hr-$_port.log" >&2; return 1
 # }
 # hr-claude-sub() {           # subscription OAuth -> api.anthropic.com (default target)
+#   local _audit_plugin_dir="${AIRKIT_AUDIT_PLUGIN_DIR:-$HOME/.config/ai-runtime-kit/plugins/airkit-context}"
+#   local -a _audit_args
+#   [[ -f "$_audit_plugin_dir/.claude-plugin/plugin.json" ]] && _audit_args=(--plugin-dir "$_audit_plugin_dir")
 #   # Unset the AirKit snippet's CCR routing exports; user settings stay
 #   # fully loaded, and env wins over them for the proxy ANTHROPIC_BASE_URL.
 #   # Requires the CCR "Claude Code" agent profile to not be 系统默认 (see
@@ -248,8 +262,9 @@ codex-sub() {
 #   CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
 #     env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY \
 #         -u ANTHROPIC_API_BASE_URL -u CLAUDE_AGENT_API_BASE_URL \
+#         AIRKIT_AUDIT_ENABLED=1 \
 #         ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_SUB" \
-#     command claude "$@"
+#     command claude "${_audit_args[@]}" "$@"
 # }
 # hr-claude() {               # bare claude -> internal gateway (placeholder URL!)
 #   _hr_proxy "$_HR_PORT_OP" "${ANTHROPIC_BASE_URL_DEFAULT:-https://llm-gateway.example.internal}" "" cache 1 || return
