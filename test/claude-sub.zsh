@@ -133,13 +133,21 @@ for name in $routing_vars; do
 done
 
 command rm -f "$tmpdir/claude.args" "$tmpdir/claude.env" "$tmpdir/airkit.args" "$tmpdir/airkit.env"
+airkit() {
+  env > "$CLAUDE_SUB_TEST_TMP/airkit-shadow.env"
+  command claude "$@"
+}
 set +e
 AIRKIT_SHIELD_SUBSCRIPTION=1 AIRKIT_SHIELD_TEST_FAIL=1 claude-sub --model sonnet
 shield_failure_status=$?
 set -e
 
 if [[ $shield_failure_status -ne 42 ]]; then
-  print "claude-sub did not return the Shield launch failure" >&2
+  print "claude-sub did not bypass a shadowing airkit function to return the Shield launch failure" >&2
+  exit 1
+fi
+if [[ -e "$tmpdir/airkit-shadow.env" ]]; then
+  print "claude-sub passed subscription OAuth through a shadowing airkit function" >&2
   exit 1
 fi
 if [[ -e "$tmpdir/claude.args" || -e "$tmpdir/claude.env" ]]; then

@@ -127,7 +127,7 @@ claude-sub() {
   fi
 
   if [[ "${AIRKIT_SHIELD_SUBSCRIPTION:-}" == "1" ]]; then
-    _launch_command=(airkit shield launch --lane subscription -- "$_bin")
+    _launch_command=(command airkit shield launch --lane subscription -- "$_bin")
   else
     _launch_command=("$_bin")
   fi
