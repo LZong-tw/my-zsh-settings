@@ -20,7 +20,25 @@ cat > "$tmpdir/bin/op" <<'EOF'
 printf 'test-oauth-token'
 EOF
 
-command chmod +x "$tmpdir/bin/claude" "$tmpdir/bin/op"
+cat > "$tmpdir/bin/airkit" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$@" > "$CLAUDE_SUB_TEST_TMP/airkit.args"
+env > "$CLAUDE_SUB_TEST_TMP/airkit.env"
+if [ "${AIRKIT_SHIELD_TEST_FAIL:-0}" = "1" ]; then
+  exit 42
+fi
+if [ "$1" != "shield" ] || [ "$2" != "launch" ] || [ "$3" != "--lane" ] \
+  || [ "$4" != "subscription" ] || [ "$5" != "--" ]; then
+  exit 64
+fi
+shift 5
+ANTHROPIC_API_BASE_URL="http://127.0.0.1:8811" \
+  ANTHROPIC_BASE_URL="http://127.0.0.1:8811" \
+  ANTHROPIC_CUSTOM_HEADERS="x-airkit-shield: fixture-capability" \
+  exec "$@"
+EOF
+
+command chmod +x "$tmpdir/bin/airkit" "$tmpdir/bin/claude" "$tmpdir/bin/op"
 
 export CLAUDE_SUB_TEST_TMP="$tmpdir"
 export PATH="$tmpdir/bin:$PATH"
@@ -47,6 +65,11 @@ routing_vars=(
 source "$source_file"
 
 claude-sub --model sonnet
+
+if [[ -e "$tmpdir/airkit.args" ]]; then
+  print "claude-sub routed the default feature-off path through Shield" >&2
+  exit 1
+fi
 
 # Full user scope must load: no --setting-sources and no --settings override.
 if command grep -q -- '^--setting' "$tmpdir/claude.args"; then
@@ -108,6 +131,64 @@ for name in $routing_vars; do
     exit 1
   fi
 done
+
+command rm -f "$tmpdir/claude.args" "$tmpdir/claude.env" "$tmpdir/airkit.args" "$tmpdir/airkit.env"
+set +e
+AIRKIT_SHIELD_SUBSCRIPTION=1 AIRKIT_SHIELD_TEST_FAIL=1 claude-sub --model sonnet
+shield_failure_status=$?
+set -e
+
+if [[ $shield_failure_status -ne 42 ]]; then
+  print "claude-sub did not return the Shield launch failure" >&2
+  exit 1
+fi
+if [[ -e "$tmpdir/claude.args" || -e "$tmpdir/claude.env" ]]; then
+  print "claude-sub spawned Claude after Shield launch failed" >&2
+  exit 1
+fi
+
+AIRKIT_SHIELD_SUBSCRIPTION=1 AIRKIT_SHIELD_TEST_FAIL=0 claude-sub -p 'shielded prompt'
+
+expected_shield_args=(
+  shield
+  launch
+  --lane
+  subscription
+  --
+  "$tmpdir/bin/claude"
+  --plugin-dir
+  "$AIRKIT_AUDIT_PLUGIN_DIR"
+  -p
+  'shielded prompt'
+)
+if [[ "$(<"$tmpdir/airkit.args")" != "${(F)expected_shield_args}" ]]; then
+  print "claude-sub did not preserve the Shield launch argv boundary" >&2
+  exit 1
+fi
+
+if ! command grep -qx 'CLAUDE_CODE_OAUTH_TOKEN=test-oauth-token' "$tmpdir/claude.env"; then
+  print "shielded claude-sub print mode did not preserve subscription OAuth" >&2
+  exit 1
+fi
+for name in ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY CLAUDE_AGENT_API_BASE_URL; do
+  if command grep -q "^${name}=" "$tmpdir/airkit.env" \
+    || command grep -q "^${name}=" "$tmpdir/claude.env"; then
+    print "shielded claude-sub leaked ${name}" >&2
+    exit 1
+  fi
+done
+for name in ANTHROPIC_BASE_URL ANTHROPIC_API_BASE_URL ANTHROPIC_CUSTOM_HEADERS; do
+  if command grep -q "^${name}=" "$tmpdir/airkit.env"; then
+    print "claude-sub leaked inherited ${name} before AirKit Shield injection" >&2
+    exit 1
+  fi
+done
+if ! command grep -qx 'ANTHROPIC_BASE_URL=http://127.0.0.1:8811' "$tmpdir/claude.env" \
+  || ! command grep -qx 'ANTHROPIC_API_BASE_URL=http://127.0.0.1:8811' "$tmpdir/claude.env" \
+  || ! command grep -qx 'ANTHROPIC_CUSTOM_HEADERS=x-airkit-shield: fixture-capability' "$tmpdir/claude.env"; then
+  print "shielded claude-sub did not preserve AirKit's child-only Shield transport" >&2
+  exit 1
+fi
 
 # hr-claude-sub ships commented out; define it from the template block.
 eval "$(command sed -n '/^# hr-claude-sub()/,/^# }/p' "$source_file" | command sed 's/^# \{0,1\}//')"

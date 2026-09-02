@@ -88,7 +88,7 @@ claude-web() {
 
 claude-sub() {
   local _bin _arg _is_print _oauth_token _op_bin _audit_plugin_dir
-  local -a _oauth_env _audit_args
+  local -a _oauth_env _audit_args _launch_command
   _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
 
   _audit_plugin_dir="${AIRKIT_AUDIT_PLUGIN_DIR:-$HOME/.config/ai-runtime-kit/plugins/airkit-context}"
@@ -124,6 +124,12 @@ claude-sub() {
       return 1
     }
     _oauth_env=(CLAUDE_CODE_OAUTH_TOKEN="$_oauth_token")
+  fi
+
+  if [[ "${AIRKIT_SHIELD_SUBSCRIPTION:-}" == "1" ]]; then
+    _launch_command=(airkit shield launch --lane subscription -- "$_bin")
+  else
+    _launch_command=("$_bin")
   fi
 
   # Plain `claude` routes to the company gateway from shell env (its own
@@ -173,7 +179,7 @@ claude-sub() {
     -u CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS \
     AIRKIT_AUDIT_ENABLED=1 \
     "${_oauth_env[@]}" \
-    "$_bin" "${_audit_args[@]}" "$@"
+    "${_launch_command[@]}" "${_audit_args[@]}" "$@"
 }
 
 codex-sub() {
