@@ -27,6 +27,7 @@ export ANTHROPIC_API_BASE_URL="http://127.0.0.1:1"
 export CLAUDE_AGENT_API_BASE_URL="http://127.0.0.1:1"
 export ANTHROPIC_CUSTOM_HEADERS="x-airkit-shield: stale-capability"
 export AIRKIT_SHIELD_BYPASS_REASON="stale-bypass"
+export AIRKIT_SHIELD_LAUNCHER="headroom/spoofed/v1"
 
 eval "$(command sed -n '/^# hr-claude-web()/,/^# }/p' "$source_file" | command sed 's/^# \{0,1\}//')"
 eval "$(command sed -n '/^# hr-airclaude()/,/^# }/p' "$source_file" | command sed 's/^# \{0,1\}//')"
@@ -58,6 +59,10 @@ if ! command grep -qx "AIRCLAUDE_ANTHROPIC_PROVIDER_BASE_URL=http://127.0.0.1:$_
   print "hr-claude-web did not preserve its Headroom provider override" >&2
   exit 1
 fi
+if ! command grep -qx 'AIRKIT_SHIELD_LAUNCHER=headroom/hr-claude-web/v1' "$tmpdir/airclaude.env"; then
+  print "hr-claude-web did not stamp its validated Shield launcher marker" >&2
+  exit 1
+fi
 assert_no_direct_route_or_credential
 
 command rm -f "$tmpdir/airclaude.args" "$tmpdir/airclaude.env"
@@ -69,6 +74,10 @@ if [[ "$(<"$tmpdir/airclaude.args")" != "${(F)expected_air_args}" ]]; then
 fi
 if ! command grep -qx "AIRCLAUDE_PROVIDER_BASE_URL=http://127.0.0.1:$_HR_PORT_AIR/v1/chat/completions" "$tmpdir/airclaude.env"; then
   print "hr-airclaude did not preserve its Headroom provider override" >&2
+  exit 1
+fi
+if ! command grep -qx 'AIRKIT_SHIELD_LAUNCHER=headroom/hr-airclaude/v1' "$tmpdir/airclaude.env"; then
+  print "hr-airclaude did not stamp its validated Shield launcher marker" >&2
   exit 1
 fi
 assert_no_direct_route_or_credential

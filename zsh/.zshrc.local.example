@@ -314,6 +314,7 @@ codex-sub() {
 #       -u ANTHROPIC_CUSTOM_HEADERS -u ANTHROPIC_AUTH_TOKEN_OP_REF \
 #       -u ANTHROPIC_AUTH_TOKEN_OP_REF_WEB -u AIRKIT_SHIELD_SUBSCRIPTION \
 #       -u AIRKIT_SHIELD_BYPASS_REASON \
+#       AIRKIT_SHIELD_LAUNCHER="headroom/hr-claude-web/v1" \
 #       AIRCLAUDE_ANTHROPIC_PROVIDER_BASE_URL="http://127.0.0.1:$_HR_PORT_WEB/v1/messages" \
 #     command airclaude --profile oneportal-lowcost --mode web -- "$@"
 # }
@@ -337,6 +338,7 @@ codex-sub() {
 #       -u ANTHROPIC_CUSTOM_HEADERS -u ANTHROPIC_AUTH_TOKEN_OP_REF \
 #       -u ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT -u AIRKIT_SHIELD_SUBSCRIPTION \
 #       -u AIRKIT_SHIELD_BYPASS_REASON \
+#       AIRKIT_SHIELD_LAUNCHER="headroom/hr-airclaude/v1" \
 #       AIRCLAUDE_PROVIDER_BASE_URL="http://127.0.0.1:$_HR_PORT_AIR/v1/chat/completions" \
 #     command airclaude "$@"
 # }
