@@ -28,10 +28,16 @@ if [ "${AIRKIT_SHIELD_TEST_FAIL:-0}" = "1" ]; then
   exit 42
 fi
 if [ "$1" != "shield" ] || [ "$2" != "launch" ] || [ "$3" != "--lane" ] \
-  || [ "$4" != "subscription" ] || [ "$5" != "--" ]; then
+  || [ "$4" != "subscription" ]; then
   exit 64
 fi
-shift 5
+shift 4
+if [ "$1" = "--target" ]; then
+  [ "$2" = "http://127.0.0.1:8801" ] || exit 64
+  shift 2
+fi
+[ "$1" = "--" ] || exit 64
+shift
 ANTHROPIC_API_BASE_URL="http://127.0.0.1:8811" \
   ANTHROPIC_BASE_URL="http://127.0.0.1:8811" \
   ANTHROPIC_CUSTOM_HEADERS="x-airkit-shield: fixture-capability" \
@@ -205,7 +211,14 @@ if ! typeset -f hr-claude-sub >/dev/null; then
   exit 1
 fi
 _HR_PORT_SUB=8801
-_hr_proxy() { return 0; }
+_hr_proxy() {
+  print "$*" >> "$CLAUDE_SUB_TEST_TMP/hr-proxy.args"
+  return 0
+}
+export AIRKIT_SHIELD_CONTROL_CAPABILITY="stale-control-capability"
+export AIRKIT_SHIELD_APPROVAL_CAPABILITY="stale-approval-capability"
+export AIRKIT_SHIELD_APPROVAL_SOCKET="/tmp/stale-approval.sock"
+export AIRKIT_SHIELD_CAPABILITY="stale-request-capability"
 
 command rm -f "$tmpdir/airkit.args" "$tmpdir/airkit.env" "$tmpdir/claude.args" "$tmpdir/claude.env"
 hr-claude-sub --model sonnet
@@ -220,7 +233,7 @@ if command grep -q -- '^--setting' "$tmpdir/claude.args"; then
   exit 1
 fi
 
-for name in ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_API_BASE_URL CLAUDE_AGENT_API_BASE_URL; do
+for name in ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_API_BASE_URL CLAUDE_AGENT_API_BASE_URL AIRKIT_SHIELD_CONTROL_CAPABILITY AIRKIT_SHIELD_APPROVAL_CAPABILITY AIRKIT_SHIELD_APPROVAL_SOCKET AIRKIT_SHIELD_CAPABILITY; do
   if command grep -q "^${name}=" "$tmpdir/claude.env"; then
     print "hr-claude-sub leaked ${name}" >&2
     exit 1
@@ -244,6 +257,71 @@ fi
 
 if ! command grep -qx 'AIRKIT_SHIELD_BYPASS_REASON=zsh_direct_subscription' "$tmpdir/claude.env"; then
   print "hr-claude-sub did not declare its Shield bypass disposition" >&2
+  exit 1
+fi
+
+command rm -f "$tmpdir/airkit.args" "$tmpdir/airkit.env" "$tmpdir/claude.args" "$tmpdir/claude.env" "$tmpdir/hr-proxy.args"
+AIRKIT_SHIELD_SUBSCRIPTION=1 hr-claude-sub --model sonnet
+
+expected_headroom_shield_args=(
+  shield
+  launch
+  --lane
+  subscription
+  --target
+  "http://127.0.0.1:$_HR_PORT_SUB"
+  --
+  "$tmpdir/bin/claude"
+  --plugin-dir
+  "$AIRKIT_AUDIT_PLUGIN_DIR"
+  --model
+  sonnet
+)
+if [[ "$(<"$tmpdir/airkit.args")" != "${(F)expected_headroom_shield_args}" ]]; then
+  print "shielded hr-claude-sub did not preserve the Headroom destination lease argv boundary" >&2
+  exit 1
+fi
+
+if [[ "$(<"$tmpdir/hr-proxy.args")" != "$_HR_PORT_SUB   cache 1" ]]; then
+  print "shielded hr-claude-sub did not start the subscription Headroom proxy" >&2
+  exit 1
+fi
+
+for name in ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL ANTHROPIC_API_BASE_URL ANTHROPIC_CUSTOM_HEADERS CLAUDE_AGENT_API_BASE_URL AIRKIT_SHIELD_BYPASS_REASON AIRKIT_SHIELD_CONTROL_CAPABILITY AIRKIT_SHIELD_APPROVAL_CAPABILITY AIRKIT_SHIELD_APPROVAL_SOCKET AIRKIT_SHIELD_CAPABILITY; do
+  if command grep -q "^${name}=" "$tmpdir/airkit.env"; then
+    print "shielded hr-claude-sub leaked ${name} into the Shield launcher" >&2
+    exit 1
+  fi
+done
+
+if command grep -q "^ANTHROPIC_BASE_URL=http://127.0.0.1:$_HR_PORT_SUB$" "$tmpdir/claude.env"; then
+  print "shielded hr-claude-sub leaked the Headroom destination into the Claude child" >&2
+  exit 1
+fi
+for name in ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY CLAUDE_AGENT_API_BASE_URL AIRKIT_SHIELD_BYPASS_REASON AIRKIT_SHIELD_CONTROL_CAPABILITY AIRKIT_SHIELD_APPROVAL_CAPABILITY AIRKIT_SHIELD_APPROVAL_SOCKET AIRKIT_SHIELD_CAPABILITY; do
+  if command grep -q "^${name}=" "$tmpdir/claude.env"; then
+    print "shielded hr-claude-sub leaked ${name} into the Claude child" >&2
+    exit 1
+  fi
+done
+if ! command grep -qx 'ANTHROPIC_BASE_URL=http://127.0.0.1:8811' "$tmpdir/claude.env" \
+  || ! command grep -qx 'ANTHROPIC_API_BASE_URL=http://127.0.0.1:8811' "$tmpdir/claude.env" \
+  || ! command grep -qx 'ANTHROPIC_CUSTOM_HEADERS=x-airkit-shield: fixture-capability' "$tmpdir/claude.env"; then
+  print "shielded hr-claude-sub did not preserve AirKit's child-only Shield transport" >&2
+  exit 1
+fi
+if command grep -q -- '--target\|127\.0\.0\.1:8801' "$tmpdir/claude.args"; then
+  print "shielded hr-claude-sub leaked the destination lease into the Claude argv" >&2
+  exit 1
+fi
+
+command rm -f "$tmpdir/airkit.args" "$tmpdir/airkit.env" "$tmpdir/claude.args" "$tmpdir/claude.env"
+set +e
+AIRKIT_SHIELD_SUBSCRIPTION=1 AIRKIT_SHIELD_TEST_FAIL=1 hr-claude-sub --model sonnet
+headroom_shield_failure_status=$?
+set -e
+if [[ $headroom_shield_failure_status -ne 42 || -e "$tmpdir/claude.args" || -e "$tmpdir/claude.env" ]]; then
+  print "shielded hr-claude-sub did not fail closed before starting Claude" >&2
   exit 1
 fi
 

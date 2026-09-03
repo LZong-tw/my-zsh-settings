@@ -256,30 +256,46 @@ codex-sub() {
 #   done
 #   echo "headroom proxy on $_port did not come up; see ~/.headroom/logs/hr-$_port.log" >&2; return 1
 # }
-# hr-claude-sub() {           # subscription OAuth -> api.anthropic.com (default target)
-#   # Shield disposition: explicit bypass (zsh_direct_subscription). This
-#   # Headroom-only wrapper must keep Claude pointed at its local Headroom
-#   # listener; Shield's subscription lane has a fixed api.anthropic.com
-#   # target, so composing both by overwriting ANTHROPIC_BASE_URL would either
-#   # bypass Shield invisibly or break Headroom. Use `AIRKIT_SHIELD_SUBSCRIPTION=1
-#   # claude-sub ...` when the request needs Shield policy/approval instead.
-#   local _audit_plugin_dir="${AIRKIT_AUDIT_PLUGIN_DIR:-$HOME/.config/ai-runtime-kit/plugins/airkit-context}"
+# hr-claude-sub() {           # subscription OAuth -> Headroom -> api.anthropic.com
+#   local _audit_plugin_dir _bin
 #   local -a _audit_args
+#   _audit_plugin_dir="${AIRKIT_AUDIT_PLUGIN_DIR:-$HOME/.config/ai-runtime-kit/plugins/airkit-context}"
 #   [[ -f "$_audit_plugin_dir/.claude-plugin/plugin.json" ]] && _audit_args=(--plugin-dir "$_audit_plugin_dir")
 #   # Unset the AirKit snippet's CCR routing exports; user settings stay
 #   # fully loaded, and env wins over them for the proxy ANTHROPIC_BASE_URL.
 #   # Requires the CCR "Claude Code" agent profile to not be 系统默认 (see
 #   # claude-sub note above) — otherwise the injected apiKeyHelper wins.
 #   _hr_proxy "$_HR_PORT_SUB" "" "" cache 1 || return
-#   CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
-#     env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY \
-#         -u ANTHROPIC_API_BASE_URL -u ANTHROPIC_CUSTOM_HEADERS \
-#         -u CLAUDE_AGENT_API_BASE_URL -u AIRKIT_SHIELD_SUBSCRIPTION \
-#         -u AIRKIT_SHIELD_BYPASS_REASON \
-#         AIRKIT_AUDIT_ENABLED=1 \
-#         AIRKIT_SHIELD_BYPASS_REASON=zsh_direct_subscription \
-#         ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_SUB" \
-#     command claude "${_audit_args[@]}" "$@"
+#   if [[ "${AIRKIT_SHIELD_SUBSCRIPTION:-}" == "1" ]]; then
+#     _bin=$(whence -p claude) || { echo "claude not found" >&2; return 127; }
+#     # The target is an argv-only, launcher-controlled lease registration.
+#     # Claude receives only the Shield child transport; neither Headroom's
+#     # target nor a Shield control capability reaches the child environment.
+#     CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
+#       env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY \
+#           -u ANTHROPIC_BASE_URL -u ANTHROPIC_API_BASE_URL \
+#           -u ANTHROPIC_CUSTOM_HEADERS -u CLAUDE_AGENT_API_BASE_URL \
+#           -u AIRKIT_SHIELD_SUBSCRIPTION -u AIRKIT_SHIELD_BYPASS_REASON \
+#           -u AIRKIT_SHIELD_CONTROL_CAPABILITY -u AIRKIT_SHIELD_APPROVAL_CAPABILITY \
+#           -u AIRKIT_SHIELD_APPROVAL_SOCKET -u AIRKIT_SHIELD_CAPABILITY \
+#           AIRKIT_AUDIT_ENABLED=1 \
+#       command airkit shield launch --lane subscription \
+#         --target "http://127.0.0.1:$_HR_PORT_SUB" -- "$_bin" "${_audit_args[@]}" "$@"
+#   else
+#     # Feature-off remains intentionally unprotected, with an explicit audit
+#     # disposition rather than an ambiguous partial Shield route.
+#     CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
+#       env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY \
+#           -u ANTHROPIC_API_BASE_URL -u ANTHROPIC_CUSTOM_HEADERS \
+#           -u CLAUDE_AGENT_API_BASE_URL -u AIRKIT_SHIELD_SUBSCRIPTION \
+#           -u AIRKIT_SHIELD_BYPASS_REASON -u AIRKIT_SHIELD_CONTROL_CAPABILITY \
+#           -u AIRKIT_SHIELD_APPROVAL_CAPABILITY -u AIRKIT_SHIELD_APPROVAL_SOCKET \
+#           -u AIRKIT_SHIELD_CAPABILITY \
+#           AIRKIT_AUDIT_ENABLED=1 \
+#           AIRKIT_SHIELD_BYPASS_REASON=zsh_direct_subscription \
+#           ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_SUB" \
+#       command claude "${_audit_args[@]}" "$@"
+#   fi
 # }
 # hr-claude() {               # bare claude -> internal gateway (placeholder URL!)
 #   _hr_proxy "$_HR_PORT_OP" "${ANTHROPIC_BASE_URL_DEFAULT:-https://llm-gateway.example.internal}" "" cache 1 || return
