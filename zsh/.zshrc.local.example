@@ -290,7 +290,15 @@ codex-sub() {
 #   command -v airclaude >/dev/null 2>&1 || { echo "airclaude not found" >&2; return 127; }
 #   command -v ccr >/dev/null 2>&1 || { echo "ccr not found" >&2; return 127; }
 #   _hr_proxy "$_HR_PORT_WEB" "${ANTHROPIC_BASE_URL_WEB:-https://litellm.example.internal}" "" token 1 || return
-#   AIRCLAUDE_ANTHROPIC_PROVIDER_BASE_URL="http://127.0.0.1:$_HR_PORT_WEB/v1/messages" \
+#   # Keep the Headroom override scalar-only. AirClaude reconstructs its
+#   # managed route and credentials from the profile, then performs Shield
+#   # launch handling; inherited direct Claude settings must not leak in.
+#   env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL \
+#       -u ANTHROPIC_API_BASE_URL -u CLAUDE_AGENT_API_BASE_URL \
+#       -u ANTHROPIC_CUSTOM_HEADERS -u ANTHROPIC_AUTH_TOKEN_OP_REF \
+#       -u ANTHROPIC_AUTH_TOKEN_OP_REF_WEB -u AIRKIT_SHIELD_SUBSCRIPTION \
+#       -u AIRKIT_SHIELD_BYPASS_REASON \
+#       AIRCLAUDE_ANTHROPIC_PROVIDER_BASE_URL="http://127.0.0.1:$_HR_PORT_WEB/v1/messages" \
 #     command airclaude --profile oneportal-lowcost --mode web -- "$@"
 # }
 # hr-claude-jb() {            # JBridge (placeholder URL!)
@@ -306,7 +314,15 @@ codex-sub() {
 #   command -v airclaude >/dev/null 2>&1 || { echo "airclaude not found" >&2; return 127; }
 #   command -v ccr >/dev/null 2>&1 || { echo "ccr not found" >&2; return 127; }
 #   _hr_proxy "$_HR_PORT_AIR" "" "${ANTHROPIC_BASE_URL_DEFAULT:-https://llm-gateway.example.internal}" cache 1 || return
-#   AIRCLAUDE_PROVIDER_BASE_URL="http://127.0.0.1:$_HR_PORT_AIR/v1/chat/completions" command airclaude "$@"
+#   # As above, do not let a direct Claude route/credential override the
+#   # AirKit-managed provider configuration or its Shield disposition.
+#   env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY -u ANTHROPIC_BASE_URL \
+#       -u ANTHROPIC_API_BASE_URL -u CLAUDE_AGENT_API_BASE_URL \
+#       -u ANTHROPIC_CUSTOM_HEADERS -u ANTHROPIC_AUTH_TOKEN_OP_REF \
+#       -u ANTHROPIC_AUTH_TOKEN_OP_REF_DEFAULT -u AIRKIT_SHIELD_SUBSCRIPTION \
+#       -u AIRKIT_SHIELD_BYPASS_REASON \
+#       AIRCLAUDE_PROVIDER_BASE_URL="http://127.0.0.1:$_HR_PORT_AIR/v1/chat/completions" \
+#     command airclaude "$@"
 # }
 # hr-codex() {
 #   _hr_proxy "$_HR_PORT_CODEX" || return
