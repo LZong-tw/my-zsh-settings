@@ -257,6 +257,12 @@ codex-sub() {
 #   echo "headroom proxy on $_port did not come up; see ~/.headroom/logs/hr-$_port.log" >&2; return 1
 # }
 # hr-claude-sub() {           # subscription OAuth -> api.anthropic.com (default target)
+#   # Shield disposition: explicit bypass (zsh_direct_subscription). This
+#   # Headroom-only wrapper must keep Claude pointed at its local Headroom
+#   # listener; Shield's subscription lane has a fixed api.anthropic.com
+#   # target, so composing both by overwriting ANTHROPIC_BASE_URL would either
+#   # bypass Shield invisibly or break Headroom. Use `AIRKIT_SHIELD_SUBSCRIPTION=1
+#   # claude-sub ...` when the request needs Shield policy/approval instead.
 #   local _audit_plugin_dir="${AIRKIT_AUDIT_PLUGIN_DIR:-$HOME/.config/ai-runtime-kit/plugins/airkit-context}"
 #   local -a _audit_args
 #   [[ -f "$_audit_plugin_dir/.claude-plugin/plugin.json" ]] && _audit_args=(--plugin-dir "$_audit_plugin_dir")
@@ -267,8 +273,11 @@ codex-sub() {
 #   _hr_proxy "$_HR_PORT_SUB" "" "" cache 1 || return
 #   CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 \
 #     env -u ANTHROPIC_AUTH_TOKEN -u ANTHROPIC_API_KEY \
-#         -u ANTHROPIC_API_BASE_URL -u CLAUDE_AGENT_API_BASE_URL \
+#         -u ANTHROPIC_API_BASE_URL -u ANTHROPIC_CUSTOM_HEADERS \
+#         -u CLAUDE_AGENT_API_BASE_URL -u AIRKIT_SHIELD_SUBSCRIPTION \
+#         -u AIRKIT_SHIELD_BYPASS_REASON \
 #         AIRKIT_AUDIT_ENABLED=1 \
+#         AIRKIT_SHIELD_BYPASS_REASON=zsh_direct_subscription \
 #         ANTHROPIC_BASE_URL="http://127.0.0.1:$_HR_PORT_SUB" \
 #     command claude "${_audit_args[@]}" "$@"
 # }

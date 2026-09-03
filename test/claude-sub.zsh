@@ -207,7 +207,13 @@ fi
 _HR_PORT_SUB=8801
 _hr_proxy() { return 0; }
 
+command rm -f "$tmpdir/airkit.args" "$tmpdir/airkit.env" "$tmpdir/claude.args" "$tmpdir/claude.env"
 hr-claude-sub --model sonnet
+
+if [[ -e "$tmpdir/airkit.args" || -e "$tmpdir/airkit.env" ]]; then
+  print "hr-claude-sub claimed Shield coverage while bypassing it" >&2
+  exit 1
+fi
 
 if command grep -q -- '^--setting' "$tmpdir/claude.args"; then
   print "hr-claude-sub restricted setting sources or injected --settings" >&2
@@ -226,8 +232,18 @@ if ! command grep -qx "ANTHROPIC_BASE_URL=http://127.0.0.1:$_HR_PORT_SUB" "$tmpd
   exit 1
 fi
 
+if command grep -q '^ANTHROPIC_CUSTOM_HEADERS=' "$tmpdir/claude.env"; then
+  print "hr-claude-sub retained a Shield capability header on its bypass route" >&2
+  exit 1
+fi
+
 if ! command grep -qx "CLAUDE_CONFIG_DIR=$tmpdir/claude-config" "$tmpdir/claude.env"; then
   print "hr-claude-sub changed CLAUDE_CONFIG_DIR instead of sharing sessions" >&2
+  exit 1
+fi
+
+if ! command grep -qx 'AIRKIT_SHIELD_BYPASS_REASON=zsh_direct_subscription' "$tmpdir/claude.env"; then
+  print "hr-claude-sub did not declare its Shield bypass disposition" >&2
   exit 1
 fi
 
