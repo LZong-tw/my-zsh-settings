@@ -937,6 +937,24 @@ claude() {
         "$_bin" "$@"
 }
 
+# Subscription Claude Code through a running pxpipe proxy on :47821 (under WSL
+# mirrored networking, the always-on one on Windows). `pxpipe warp` diverts only
+# /v1/messages, so /remote-control and claude.ai connectors keep working; they
+# switch off whenever ANTHROPIC_BASE_URL is set, so every provider override is
+# stripped here. warp execs the claude binary, not the claude() wrapper above.
+claude-px() {
+    (( $+commands[pxpipe] )) || { echo "pxpipe not found; install: npm i -g pxpipe-proxy" >&2; return 127; }
+    # Without the proxy, warp still starts but every request fails.
+    command curl -fsS -m 1 --noproxy '*' -o /dev/null http://127.0.0.1:47821/ 2>/dev/null \
+      || { echo "claude-px: pxpipe proxy is not reachable on 127.0.0.1:47821; start it first" >&2; return 1; }
+    env -u ANTHROPIC_BASE_URL \
+        -u ANTHROPIC_AUTH_TOKEN \
+        -u ANTHROPIC_API_KEY \
+        -u ANTHROPIC_API_BASE_URL \
+        -u CLAUDE_AGENT_API_BASE_URL \
+        pxpipe warp -- claude "$@"
+}
+
 devops() {
     local _bin
     _bin=$(whence -p devops) || { echo "devops not found" >&2; return 127; }
