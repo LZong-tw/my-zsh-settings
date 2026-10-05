@@ -947,6 +947,17 @@ claude-px() {
     # Without the proxy, warp still starts but every request fails.
     command curl -fsS -m 1 --noproxy '*' -o /dev/null http://127.0.0.1:47821/ 2>/dev/null \
       || { echo "claude-px: pxpipe proxy is not reachable on 127.0.0.1:47821; start it first" >&2; return 1; }
+    # Upgrade warp in the background for the next launch; never wait on npm.
+    # The prefix is wherever this pxpipe was installed (<prefix>/bin/pxpipe).
+    local _prefix=${commands[pxpipe]:h:h}
+    if (( $+commands[npm] )); then
+        mkdir -p ~/.cache
+        {
+            local _v=$(npm view pxpipe-proxy version 2>/dev/null)
+            [[ -n $_v && $_v != $(pxpipe --version 2>/dev/null) ]] \
+              && npm i -g --prefix "$_prefix" pxpipe-proxy@latest --no-audit --no-fund
+        } >~/.cache/pxpipe-update.log 2>&1 </dev/null &!
+    fi
     env -u ANTHROPIC_BASE_URL \
         -u ANTHROPIC_AUTH_TOKEN \
         -u ANTHROPIC_API_KEY \
