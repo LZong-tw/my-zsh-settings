@@ -1163,3 +1163,4 @@ _zsh_startup_dump_after_first_prompt() {
 }
 add-zsh-hook precmd _zsh_startup_dump_after_first_prompt
 export KKBOX_SKILLS_DIR=~/projects/kkbox-skills
+export PATH=~/.npm-global/bin:$PATH
