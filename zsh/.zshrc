@@ -968,7 +968,8 @@ claude-px() {
 
 # Same launcher as claude-px. pxpipe 0.14.0 diverts api.anthropic.com
 # /v1/messages, Gemini generateContent, and daily-cloudcode-pa
-# generateContent. grok (cli-chat-proxy.grok.com) and cursor-agent
+# generateContent. pi uses those paths for Anthropic and Gemini sessions.
+# grok (cli-chat-proxy.grok.com) and cursor-agent
 # (api2.cursor.sh) are not in that table, so those sessions are tunneled as-is.
 _pxpipe_warp() {
     local _label=$1 _cmd=$2
@@ -997,6 +998,7 @@ omp-px() { _pxpipe_warp omp-px omp "$@"; }
 agy-px() { _pxpipe_warp agy-px agy "$@"; }
 grok-px() { _pxpipe_warp grok-px grok "$@"; }
 cursor-px() { _pxpipe_warp cursor-px cursor-agent "$@"; }
+pi-px() { _pxpipe_warp pi-px pi "$@"; }
 
 devops() {
     local _bin

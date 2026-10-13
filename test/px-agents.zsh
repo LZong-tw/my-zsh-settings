@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 set -eo pipefail
 
-# Locks omp-px / agy-px / grok-px / cursor-px to the same warp contract as
+# Locks omp-px / agy-px / grok-px / cursor-px / pi-px to the same warp contract as
 # claude-px: no provider override in the env, refuse to launch when the proxy
 # is down, and refuse before warp when the agent binary is missing.
 
@@ -30,7 +30,7 @@ cat > "$tmpdir/bin/npm" <<'EOF'
 printf '%s\n' "$@" > "$CLAUDE_TEST_TMP/npm.args"
 EOF
 
-for _cmd in grok cursor-agent; do
+for _cmd in grok cursor-agent pi; do
   cat > "$tmpdir/bin/$_cmd" <<'EOF'
 #!/bin/sh
 echo should-not-run >&2
@@ -51,8 +51,8 @@ export ANTHROPIC_API_KEY="stale-gateway-key"
 export ANTHROPIC_API_BASE_URL="http://127.0.0.1:3456"
 export CLAUDE_AGENT_API_BASE_URL="http://127.0.0.1:3456"
 
-eval "$(command sed -n '/^_pxpipe_warp() {/,/^cursor-px()/p' "$source_file")"
-typeset -f _pxpipe_warp grok-px cursor-px omp-px agy-px >/dev/null \
+eval "$(command sed -n '/^_pxpipe_warp() {/,/^pi-px()/p' "$source_file")"
+typeset -f _pxpipe_warp grok-px cursor-px pi-px omp-px agy-px >/dev/null \
   || { print "px agent functions not found in $source_file" >&2; exit 1; }
 
 grok-px --version
@@ -83,6 +83,15 @@ cursor-px -p 'hi there'
 expected=(warp -- cursor-agent -p 'hi there')
 if [[ "$(< "$tmpdir/pxpipe.args")" != "${(F)expected}" ]]; then
   print "cursor-px did not run: pxpipe ${expected[*]}" >&2
+  print "got: $(< "$tmpdir/pxpipe.args")" >&2
+  exit 1
+fi
+
+command rm -f "$tmpdir/pxpipe.args"
+pi-px --version
+expected=(warp -- pi --version)
+if [[ "$(< "$tmpdir/pxpipe.args")" != "${(F)expected}" ]]; then
+  print "pi-px did not run: pxpipe ${expected[*]}" >&2
   print "got: $(< "$tmpdir/pxpipe.args")" >&2
   exit 1
 fi
