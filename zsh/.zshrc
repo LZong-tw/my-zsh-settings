@@ -945,7 +945,7 @@ claude() {
 claude-px() {
     (( $+commands[pxpipe] )) || { echo "pxpipe not found; install: npm i -g pxpipe-proxy" >&2; return 127; }
     # Without the proxy, warp still starts but every request fails.
-    command curl -fsS -m 1 --noproxy '*' -o /dev/null http://127.0.0.1:47821/ 2>/dev/null \
+    command curl -fsS --connect-timeout 2 -m 20 --noproxy '*' -o /dev/null http://127.0.0.1:47821/ 2>/dev/null \
       || { echo "claude-px: pxpipe proxy is not reachable on 127.0.0.1:47821; start it first" >&2; return 1; }
     # Upgrade warp in the background for the next launch; never wait on npm.
     # The prefix is wherever this pxpipe was installed (<prefix>/bin/pxpipe).
@@ -976,7 +976,7 @@ _pxpipe_warp() {
     shift 2
     (( $+commands[pxpipe] )) || { echo "pxpipe not found; install: npm i -g pxpipe-proxy" >&2; return 127; }
     (( $+commands[$_cmd] )) || { echo "${_label}: ${_cmd} not found" >&2; return 127; }
-    command curl -fsS -m 1 --noproxy '*' -o /dev/null http://127.0.0.1:47821/ 2>/dev/null \
+    command curl -fsS --connect-timeout 2 -m 20 --noproxy '*' -o /dev/null http://127.0.0.1:47821/ 2>/dev/null \
       || { echo "${_label}: pxpipe proxy is not reachable on 127.0.0.1:47821; start it first" >&2; return 1; }
     local _prefix=${commands[pxpipe]:h:h}
     if (( $+commands[npm] )); then

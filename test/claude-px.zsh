@@ -22,6 +22,7 @@ EOF
 # Proxy reachability is whatever CURL_TEST_EXIT says.
 cat > "$tmpdir/bin/curl" <<'EOF'
 #!/bin/sh
+printf '%s\n' "$@" > "$CLAUDE_TEST_TMP/curl.args"
 exit "${CURL_TEST_EXIT:-0}"
 EOF
 
@@ -70,6 +71,21 @@ for name in ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_
     exit 1
   fi
 done
+
+# The proxy can take many seconds to answer under disk pressure while still
+# being up. The probe must tell "slow" (wait) from "down" (connect fails fast),
+# so it needs a short connect timeout and a long total one.
+curl_args=("${(@f)$(< "$tmpdir/curl.args")}")
+connect_t=${curl_args[(i)--connect-timeout]}
+max_t=${curl_args[(i)-m]}
+if (( connect_t > $#curl_args )) || (( ${curl_args[connect_t + 1]} > 3 )); then
+  print "claude-px probe lacks a short --connect-timeout: ${curl_args[*]}" >&2
+  exit 1
+fi
+if (( max_t > $#curl_args )) || (( ${curl_args[max_t + 1]} < 15 )); then
+  print "claude-px probe gives up on a slow proxy (-m < 15): ${curl_args[*]}" >&2
+  exit 1
+fi
 
 # Proxy down: fail fast, never launch warp.
 command rm -f "$tmpdir/pxpipe.args"
